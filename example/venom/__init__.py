@@ -29,6 +29,10 @@ class MainHandler(webapp2.RequestHandler):
     if not self.request.path.endswith('/'):
       self.redirect(self.request.path + '/')
       return
+    
+    template_values = {}
+    path = os.path.join(os.path.dirname(__file__), 'templates/main.html')
+    self.response.out.write(template.render(path, template_values))
 
 
 from cStringIO import StringIO

@@ -1,0 +1,70 @@
+body{
+  display:flex;
+  flex-direction:row;
+  
+  font-family:helvetica, Arial;
+  font-size:16px;
+  
+  color:rgb(235,235,235);
+  background:rgb(31,31,31);
+}
+sidebar{
+  display:block;
+  min-width:250px;
+  
+  background:rgb(255,255,255);
+  color:rgb(51,51,51);
+}
+content{
+  display:block;
+  flex:2;
+  
+  overflow:scroll;
+}
+
+sidebar logo,
+sidebar label,
+sidebar item{
+  display:block;
+  padding:14px 16px;
+  background:rgb(255,255,255);
+  
+  cursor:pointer;
+}
+
+sidebar label{
+  border-top:1px solid rgb(200,200,200);
+  color:rgb(158,158,158);
+  background:rgb(245,245,245);
+  padding:16px 16px;
+  
+  font-size:12px;
+  text-transform:uppercase;
+  
+  cursor:default;
+}
+sidebar img{
+  display:inline-block;
+  vertical-align:middle;
+  
+  height:24px;
+  width:24px;
+  padding-right:10px;
+}
+
+sidebar item{
+  padding:14px 24px;
+}
+sidebar item:hover{
+  text-decoration:underline;
+}
+
+content centered{
+  display:flex;
+  flex-direction:row;
+  
+  width:100%;
+  max-width:900px;
+  min-width:400px;
+  margin:50px auto;
+}

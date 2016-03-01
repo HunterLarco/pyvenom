@@ -29,7 +29,7 @@ class MainHandler(webapp2.RequestHandler):
       return
     
     template_values = {
-      'scripts': scripts.keys()
+      'scripts': sorted(scripts.keys())
     }
     path = os.path.join(os.path.dirname(__file__), 'templates/scripts.html')
     self.response.out.write(template.render(path, template_values))

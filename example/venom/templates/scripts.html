@@ -65,7 +65,9 @@ content centered{
   display:flex;
   flex-direction:row;
   
+  width:100%;
   max-width:900px;
+  min-width:400px;
   margin:50px auto;
 }
 
@@ -87,8 +89,6 @@ content pre{
   font-family:monospace;
   font-size:14px;
   color:rgb(200,200,200);
-  
-  max-width:100%;
 }
 
 content border,
@@ -188,7 +188,7 @@ content scripts h1{
         script.addEventListener('click', function(){
           
           var pre = CreatePre();
-          pre.write('> EXECUTING ' + script.innerHTML);
+          pre.write('> EXECUTING ' + script.innerHTML + ' at ' + GetTime());
           pre.pend();
           
           fetch('scripts/execute/' + script.innerHTML, {
@@ -205,6 +205,17 @@ content scripts h1{
         });
       })(script);
   }
+  function GetTime(){
+    var date = new Date();
+    
+    var minutes = '' + date.getMinutes();
+    if (minutes.length == 1) minutes = '0' + minutes;
+    
+    var seconds = '' + date.getSeconds();
+    if (seconds.length == 1) seconds = '0' + seconds;
+    
+    return date.getHours() + ':' + minutes + ':' + seconds;
+  }
   
   function CreatePre(){
     var pre = document.createElement('pre');
@@ -218,7 +229,7 @@ content scripts h1{
       index %= pending.length;
     }
     
-    responses.appendChild(pre);
+    responses.insertBefore(pre, responses.children[0]);
     
     return {
       'pend': function(){
@@ -243,7 +254,6 @@ content scripts h1{
       pre.write(line);
     }
     pre.write('< '+ json.returned);
-    pre.scrollTop = pre.scrollHeight
   }
   
 })();

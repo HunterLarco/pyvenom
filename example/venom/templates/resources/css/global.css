@@ -5,15 +5,14 @@ body{
   font-family:helvetica, Arial;
   font-size:16px;
   
-  color:rgb(235,235,235);
-  background:rgb(31,31,31);
+  color:rgb(51,51,51);
+  background:rgb(245,245,245);
 }
 sidebar{
   display:block;
   min-width:250px;
   
-  background:rgb(255,255,255);
-  color:rgb(51,51,51);
+  box-shadow:inset -1px 0px 0px rgb(200,200,200);
 }
 content{
   display:block;
@@ -22,21 +21,33 @@ content{
   overflow:scroll;
 }
 
-sidebar logo,
+sidebar .logo,
 sidebar label,
-sidebar item{
+sidebar .item{
   display:block;
   padding:14px 16px;
-  background:rgb(255,255,255);
   
   cursor:pointer;
 }
 
+sidebar .logo{
+  font-size:18px;
+  font-weight:700;
+  
+  color:rgba(255,255,255,0.95);
+  background:rgb(59,120,231);
+}
+sidebar .logo:hover{
+  background:rgb(39,100,211);
+}
+
+sidebar .logo + label{
+  border-top:none;
+}
 sidebar label{
   border-top:1px solid rgb(200,200,200);
-  color:rgb(158,158,158);
-  background:rgb(245,245,245);
-  padding:16px 16px;
+  padding:10px;
+  color:rgb(80,80,80);
   
   font-size:12px;
   text-transform:uppercase;
@@ -52,11 +63,12 @@ sidebar img{
   padding-right:10px;
 }
 
-sidebar item{
+sidebar .item{
   padding:14px 24px;
+  margin-right:1px;
 }
-sidebar item:hover{
-  text-decoration:underline;
+sidebar .item:hover{
+  background:rgb(230,230,230);
 }
 
 content centered{

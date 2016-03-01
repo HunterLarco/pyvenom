@@ -17,9 +17,11 @@ class ResourceHandler(webapp2.RequestHandler):
     self.response.out.write(file)
 
 
-class PageHandler(webapp2.RequestHandler):
-  def get(self, page):
-    pass
+class ScriptsHandler(webapp2.RequestHandler):
+  def get(self):
+    template_values = { 'scripts': sorted(scripts.keys()) }
+    path = os.path.join(os.path.dirname(__file__), 'templates/scripts.html')
+    self.response.out.write(template.render(path, template_values))
 
 
 class MainHandler(webapp2.RequestHandler):
@@ -27,12 +29,6 @@ class MainHandler(webapp2.RequestHandler):
     if not self.request.path.endswith('/'):
       self.redirect(self.request.path + '/')
       return
-    
-    template_values = {
-      'scripts': sorted(scripts.keys())
-    }
-    path = os.path.join(os.path.dirname(__file__), 'templates/scripts.html')
-    self.response.out.write(template.render(path, template_values))
 
 
 from cStringIO import StringIO
@@ -74,7 +70,7 @@ class ScriptExecutionHandler(webapp2.RequestHandler):
 
 ui = webapp2.WSGIApplication([
   ('.*/(resources|images)/(.*)', ResourceHandler),
-  ('.*/(scripts|endpoints|models|scaffold)', PageHandler),
+  ('.*/scripts/?', ScriptsHandler),
   ('.*/scripts/execute/([^/]+)/?', ScriptExecutionHandler),
   ('.*', MainHandler)
 ], debug=True)

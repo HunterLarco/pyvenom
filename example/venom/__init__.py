@@ -53,7 +53,7 @@ class Capturing(list):
 class ScriptExecutionHandler(webapp2.RequestHandler):
   def post(self, script_name):
     if not script_name in scripts:
-      self.error(500)
+      return self.error(500)
     script = scripts[script_name]
     with Capturing() as printed:
       try:

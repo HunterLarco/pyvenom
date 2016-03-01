@@ -122,7 +122,8 @@ content scripts h1{
           }).then(function(json){
             LogOutput(pre, json)
           }).catch(function(err) {
-          	// Error :(
+            pre.stop();
+          	pre.write('< Unknown Error Before Script Execution');
           });
           
         });
@@ -155,7 +156,7 @@ content scripts h1{
     
     responses.insertBefore(pre, responses.children[0]);
     
-    self = {
+    var self = {
       'pend': function(){
         pre.innerText += '\n';
         UpdatePend();
@@ -175,7 +176,8 @@ content scripts h1{
       'send': function(){
         self.write(buffer);
         buffer = '';
-      }
+      },
+      'elem': pre
     }
     
     return self;

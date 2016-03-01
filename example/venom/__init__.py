@@ -6,15 +6,29 @@ import webapp2
 import os
 import mimetypes
 import json
+import email.Utils
+import time
+
+
+mimetypes.add_type("image/svg+xml", ".svg")
 
 
 class ResourceHandler(webapp2.RequestHandler):
   def get(self, folder, path):
-    path = os.path.join(os.path.dirname(__file__), 'templates/{}/{}'.format(folder, path))
-    file = open(path, 'r').read()
-    mime = mimetypes.guess_type(path)
-    self.response.headers['Content-Type'] = mime[0]
-    self.response.out.write(file)
+    here = os.path.dirname(__file__)
+    fn = os.path.join(here, 'templates/{}/{}'.format(folder, path))
+    ctype, encoding = mimetypes.guess_type(fn)
+    assert ctype and '/' in ctype, repr(ctype)
+    expiry = 3600
+    expiration = email.Utils.formatdate(time.time() + expiry, usegmt=True)
+    fp = open(fn, 'rb')
+    try:
+      self.response.out.write(fp.read())
+    finally:
+      fp.close()
+    self.response.headers['Content-type'] = ctype
+    self.response.headers['Cache-Control'] = 'public, max-age=expiry'
+    self.response.headers['Expires'] = expiration
 
 
 class ScriptsHandler(webapp2.RequestHandler):

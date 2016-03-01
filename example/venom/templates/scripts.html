@@ -233,17 +233,17 @@ content scripts h1{
     
     return {
       'pend': function(){
-        pre.innerHTML += '\n';
+        pre.innerText += '\n';
         UpdatePend();
         interval = setInterval(UpdatePend, 150);
       },
       'stop': function(){
         if(interval)
-          pre.innerHTML = pre.innerHTML.split('\n').slice(0, -1).join('\n');
+          pre.innerText = pre.innerText.split('\n').slice(0, -1).join('\n');
         clearInterval(interval);
       },
       'write': function(value){
-        pre.innerHTML += (pre.innerHTML ? '\n' : '') + value;
+        pre.innerText += (pre.innerText ? '\n' : '') + value;
       }
     }
   }

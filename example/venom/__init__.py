@@ -56,11 +56,20 @@ class ScriptExecutionHandler(webapp2.RequestHandler):
       self.error(500)
     script = scripts[script_name]
     with Capturing() as printed:
-      returned = script()
-    self.response.out.write(json.dumps({
-      'printed': printed,
-      'returned': returned
-    }))
+      try:
+        returned = script()
+      except Exception as err:
+        returned = 'INTERNAL ERROR - {}'.format(err)
+    try:
+      self.response.out.write(json.dumps({
+        'printed': printed,
+        'returned': returned
+      }))
+    except TypeError:
+      self.response.out.write(json.dumps({
+        'printed': printed,
+        'returned': str(returned)
+      }))
 
 
 ui = webapp2.WSGIApplication([
@@ -82,6 +91,42 @@ scripts = {}
 def script(funct):
   scripts[funct.__name__] = funct
   return funct
+
+
+def importEverything():
+  path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+  modules = find_files(path, pattern='*.py')
+  for module in modules:
+    name = file_to_module(module)
+    __import__(name, globals(), locals(), [], -1)
+
+def find_files(directory, pattern='*'):
+  import fnmatch
   
+  if not os.path.exists(directory):
+    raise ValueError("Directory not found {}".format(directory))
+
+  matches = []
+  for root, dirnames, filenames in os.walk(directory):
+    
+    dirname = os.path.dirname(__file__)
+    common_prefix = os.path.commonprefix([dirname, root])
+    if common_prefix == dirname: continue
+    
+    for filename in filenames:
+      full_path = os.path.join(root, filename)
+      if fnmatch.filter([full_path], pattern):
+        matches.append(os.path.join(root, filename))
   
-import app
+  return matches
+
+def file_to_module(full_path_to_module):
+  common_prefix = os.path.commonprefix([__file__, full_path_to_module])
+  relative = os.path.relpath(full_path_to_module, common_prefix)[:-3]
+  relative = relative.replace('./', '/')
+  relative = relative.replace('../', './')
+  relative = relative.replace('/', '.')
+  return relative
+      
+
+importEverything()

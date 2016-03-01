@@ -9,7 +9,7 @@ class TestModel(ndb.Model):
 @venom.script
 def query_models():
   print('Starting')
-  query = TestModel.query(TestModel.test == '123').fetch(1000)
+  query = TestModel.query(TestModel.test == '123').fetch(40)
   print('Done')
   return str(query)
 

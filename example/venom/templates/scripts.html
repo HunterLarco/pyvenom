@@ -23,6 +23,8 @@ sidebar{
 content{
   display:block;
   flex:2;
+  
+  overflow:scroll;
 }
 
 sidebar logo,
@@ -223,6 +225,7 @@ content scripts h1{
     var interval;
     var pending = ['/', '-', '\\', '|'];
     var index = 0;
+    var buffer = '';
     
     function UpdatePend(){
       pre.innerHTML = pre.innerHTML.split('\n').slice(0, -1).join('\n') + '\n' + pending[index++];
@@ -231,7 +234,7 @@ content scripts h1{
     
     responses.insertBefore(pre, responses.children[0]);
     
-    return {
+    self = {
       'pend': function(){
         pre.innerText += '\n';
         UpdatePend();
@@ -244,16 +247,26 @@ content scripts h1{
       },
       'write': function(value){
         pre.innerText += (pre.innerText ? '\n' : '') + value;
+      },
+      'buffer': function(value){
+        buffer += (buffer ? '\n' : '') + value;
+      },
+      'send': function(){
+        self.write(buffer);
+        buffer = '';
       }
     }
+    
+    return self;
   }
   function LogOutput(pre, json){
-    pre.stop();
     for(var i=0; i<json.printed.length; i++){
       var line = json.printed[i];
-      pre.write(line);
+      pre.buffer(line);
     }
-    pre.write('< '+ json.returned);
+    pre.buffer('< '+ json.returned);
+    pre.stop();
+    pre.send();
   }
   
 })();

@@ -69,20 +69,38 @@ content centered{
   margin:50px auto;
 }
 
-content scripts,
+content scripts{
+  flex-shrink: 0
+}
+content responses{
+  display:flex;
+  flex:2;
+  flex-direction:column;
+  
+  word-break:break-word;
+  overflow: auto;
+}
+
+content pre{
+  padding:14px;
+  
+  font-family:monospace;
+  font-size:14px;
+  color:rgb(200,200,200);
+  
+  max-width:100%;
+}
+
+content border,
 content pre{
   display:block;
   
   border:1px solid rgb(120,120,120);
   margin:6px;
   
-  height:400px;
   overflow:scroll;
 }
 
-content scripts{
-  height:428px;
-}
 content scripts item,
 content scripts h1{
   display:block;
@@ -101,16 +119,6 @@ content scripts item:hover{
 content scripts h1{
   background:rgb(51,51,51);
   border-bottom:1px solid rgb(80,80,80);
-}
-
-content pre{
-  flex:2;
-  
-  padding:14px;
-  
-  font-family:monospace;
-  font-size:14px;
-  color:rgb(200,200,200);
 }
 
 </style>
@@ -146,13 +154,17 @@ content pre{
   <centered>
     
     <scripts>
-      <h1>Scripts</h1>
-      {% for script in scripts %}
-      <item>{{ script }}</item>
-      {% endfor %}
+      <border>
+        <h1>Scripts</h1>
+        {% for script in scripts %}
+        <item>{{ script }}</item>
+        {% endfor %}
+      </border>
     </scripts>
     
-    <pre>shell ready<br/>===========</pre>
+    <responses>
+      <pre>shell ready</pre>
+    </responses>
     
   </centered>
 </content>
@@ -161,11 +173,11 @@ content pre{
 <script>
 (function(){
   
-  var pre;
+  var responses;
   
   window.addEventListener('load', Init);
   function Init(){
-    pre = document.querySelector('pre');
+    responses = document.querySelector('responses');
     BindScripts();
   }
   
@@ -175,7 +187,9 @@ content pre{
       (function(script){
         script.addEventListener('click', function(){
           
-          pre.innerHTML += '\n\n> EXECUTING ' + script.innerHTML
+          var pre = CreatePre();
+          pre.write('> EXECUTING ' + script.innerHTML);
+          pre.pend();
           
           fetch('scripts/execute/' + script.innerHTML, {
           	method: 'post',
@@ -183,7 +197,7 @@ content pre{
           }).then(function(response) {
 	          return response.json();
           }).then(function(json){
-            LogOutput(json)
+            LogOutput(pre, json)
           }).catch(function(err) {
           	// Error :(
           });
@@ -191,12 +205,44 @@ content pre{
         });
       })(script);
   }
-  function LogOutput(json){
+  
+  function CreatePre(){
+    var pre = document.createElement('pre');
+    
+    var interval;
+    var pending = ['/', '-', '\\', '|'];
+    var index = 0;
+    
+    function UpdatePend(){
+      pre.innerHTML = pre.innerHTML.split('\n').slice(0, -1).join('\n') + '\n' + pending[index++];
+      index %= pending.length;
+    }
+    
+    responses.appendChild(pre);
+    
+    return {
+      'pend': function(){
+        pre.innerHTML += '\n';
+        UpdatePend();
+        interval = setInterval(UpdatePend, 150);
+      },
+      'stop': function(){
+        if(interval)
+          pre.innerHTML = pre.innerHTML.split('\n').slice(0, -1).join('\n');
+        clearInterval(interval);
+      },
+      'write': function(value){
+        pre.innerHTML += (pre.innerHTML ? '\n' : '') + value;
+      }
+    }
+  }
+  function LogOutput(pre, json){
+    pre.stop();
     for(var i=0; i<json.printed.length; i++){
       var line = json.printed[i];
-      pre.innerHTML += '\n' + line;
+      pre.write(line);
     }
-    pre.innerHTML += '\n< ' + json.returned;
+    pre.write('< '+ json.returned);
     pre.scrollTop = pre.scrollHeight
   }
   

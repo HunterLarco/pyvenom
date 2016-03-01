@@ -1,17 +1,27 @@
 import venom
 
 
-@venom.script
-def test_script():
-  print('this is a test')
-  print('lololol')
-  return 2039438
+from google.appengine.ext import ndb
+class TestModel(ndb.Model):
+  test = ndb.StringProperty(indexed=True)
 
 
 @venom.script
-def hello():
-  print('hello world')
-  return '...completed'
+def query_models():
+  print('Starting')
+  query = TestModel.query(TestModel.test == '123').fetch(1000)
+  print('Done')
+  return str(query)
+
+
+@venom.script
+def generate_models():
+  print('Starting')
+  for i in range(1000):
+    model = TestModel()
+    model.test = '123'
+    model.put()
+  print('Done')
 
 
 import webapp2

@@ -1,0 +1,45 @@
+application: hunterlarcopersonal
+version: 0-0-0
+runtime: python27
+api_version: 1
+threadsafe: yes
+
+handlers:
+# FAVICON
+- url: /favicon\.ico
+  static_files: images/favicon.ico
+  upload: images/favicon\.ico
+
+# STATIC DIRECTORIES
+- url: /images
+  static_dir: images
+- url: /resources
+  static_dir: resources
+
+# INTERACTIVE CONSOLE
+- url: /admin(/.*)?
+  script: google.appengine.ext.admin.application
+  login: admin
+
+# APP STATS
+- url: /stats(/.*)?
+  script: google.appengine.ext.appstats.ui.app
+  login: admin
+
+# VENOM
+- url: /venom(/.*)?
+  script: venom.ui
+  login: admin
+
+# MAIN SCRIPT
+- url: .*
+  script: app.app
+
+# LIBRARIES
+libraries:
+- name: webapp2
+  version: "2.5.1"
+
+builtins:
+- remote_api: on
+- appstats: on

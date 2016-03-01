@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+
+pre{
+  display:block;
+  padding:14px;
+  margin:6px;
+  border:1px solid rgb(200,200,200);
+  
+  word-wrap: break-word;
+  word-break: break-all;
+  white-space: pre;
+  
+  font-family:monospace;
+  font-size:14px;
+  color:rgb(102,102,102);
+}
+
+</style>
+
+<title>Venom Scripts</title>
+
+<meta charset='utf-8'/>
+
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='mobile-web-app-capable' content='yes'>
+
+<meta content='minimum-scale=1.0, width=device-width, maximum-scale=1, user-scalable=no' name='viewport'/>
+
+<link rel='stylesheet' href='resources/css/resets.css'/>
+<link rel='stylesheet' href='resources/css/global.css'/>
+
+</head>
+<body>
+
+
+{% with 'scripts' as page %}
+{% include 'partials/sidebar.html' %}
+{% endwith %}
+
+
+<pane class='scripts'>
+  <span class='logo'>Scripts</span>
+  
+  <content>
+    {% for script in scripts %}
+    <span class='item'>{{ script }}</span>
+    {% endfor %}
+  </content>
+</pane>
+
+<pane>
+  <span class='logo'>Output</span>
+  
+  <content class='responses'>
+    <pre>shell ready</pre>
+  </content>
+</pane>
+
+
+<script>
+(function(){
+  
+  var responses;
+  
+  window.addEventListener('load', Init);
+  function Init(){
+    responses = document.querySelector('.responses');
+    BindScripts();
+  }
+  
+  function BindScripts(){
+    var scripts = document.querySelectorAll('.scripts span.item');
+    for(var i=0,script; script=scripts[i++];)
+      (function(script){
+        script.addEventListener('click', function(){
+          
+          var pre = CreatePre();
+          pre.write('> EXECUTING ' + script.innerHTML + ' at ' + GetTime());
+          pre.pend();
+          
+          fetch('scripts/execute/' + script.innerHTML, {
+          	method: 'post',
+            credentials: 'same-origin'
+          }).then(function(response) {
+	          return response.json();
+          }).then(function(json){
+            LogOutput(pre, json)
+          }).catch(function(err) {
+            pre.stop();
+          	pre.write('< Unknown Error Before Script Execution');
+          });
+          
+        });
+      })(script);
+  }
+  function GetTime(){
+    var date = new Date();
+    
+    var minutes = '' + date.getMinutes();
+    if (minutes.length == 1) minutes = '0' + minutes;
+    
+    var seconds = '' + date.getSeconds();
+    if (seconds.length == 1) seconds = '0' + seconds;
+    
+    return date.getHours() + ':' + minutes + ':' + seconds;
+  }
+  
+  function CreatePre(){
+    var pre = document.createElement('pre');
+    
+    var interval;
+    var pending = ['/', '-', '\\', '|'];
+    var index = 0;
+    var buffer = '';
+    
+    function UpdatePend(){
+      pre.innerHTML = pre.innerHTML.split('\n').slice(0, -1).join('\n') + '\n' + pending[index++];
+      index %= pending.length;
+    }
+    
+    responses.insertBefore(pre, responses.children[0]);
+    
+    var self = {
+      'pend': function(){
+        pre.innerText += '\n';
+        UpdatePend();
+        interval = setInterval(UpdatePend, 150);
+      },
+      'stop': function(){
+        if(interval)
+          pre.innerText = pre.innerText.split('\n').slice(0, -1).join('\n');
+        clearInterval(interval);
+      },
+      'write': function(value){
+        pre.innerText += (pre.innerText ? '\n' : '') + value;
+      },
+      'buffer': function(value){
+        buffer += (buffer ? '\n' : '') + value;
+      },
+      'send': function(){
+        self.write(buffer);
+        buffer = '';
+      },
+      'elem': pre
+    }
+    
+    return self;
+  }
+  function LogOutput(pre, json){
+    for(var i=0; i<json.printed.length; i++){
+      var line = json.printed[i];
+      pre.buffer(line);
+    }
+    pre.buffer('< '+ json.returned);
+    pre.stop();
+    pre.send();
+  }
+  
+})();
+</script>
+</body>
+</html>

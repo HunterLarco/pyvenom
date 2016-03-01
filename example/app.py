@@ -17,7 +17,7 @@ def query_models():
 @venom.script
 def generate_models():
   print('Starting')
-  for i in range(1000):
+  for i in range(100):
     model = TestModel()
     model.test = '123'
     model.put()

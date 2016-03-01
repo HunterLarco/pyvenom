@@ -3,54 +3,19 @@
 <head>
 <style>
 
-content scripts{
-  flex-shrink: 0
-}
-content responses{
-  display:flex;
-  flex:2;
-  flex-direction:column;
-  
-  word-break:break-word;
-  overflow: auto;
-}
-
-content pre{
+pre{
+  display:block;
   padding:14px;
+  margin:6px;
+  border:1px solid rgb(200,200,200);
+  
+  word-wrap: break-word;
+  word-break: break-all;
+  white-space: pre;
   
   font-family:monospace;
   font-size:14px;
-  color:rgb(200,200,200);
-}
-
-content border,
-content pre{
-  display:block;
-  
-  border:1px solid rgb(120,120,120);
-  margin:6px;
-  
-  overflow:scroll;
-}
-
-content scripts item,
-content scripts h1{
-  display:block;
-  
-  padding:10px 14px;
-  margin:0px;
-  
-  cursor:default;
-}
-content scripts item{
-  cursor:pointer;
-}
-content scripts item:hover{
-  text-decoration:underline;
-}
-content scripts h1{
-  background:rgb(51,51,51);
-  border-bottom:1px solid rgb(80,80,80);
+  color:rgb(102,102,102);
 }
 
 </style>
@@ -71,26 +36,28 @@ content scripts h1{
 <body>
 
 
+{% with 'scripts' as page %}
 {% include 'partials/sidebar.html' %}
+{% endwith %}
 
-<content>
-  <centered>
-    
-    <scripts>
-      <border>
-        <h1>Scripts</h1>
-        {% for script in scripts %}
-        <item>{{ script }}</item>
-        {% endfor %}
-      </border>
-    </scripts>
-    
-    <responses>
-      <pre>shell ready</pre>
-    </responses>
-    
-  </centered>
-</content>
+
+<pane class='scripts'>
+  <span class='logo'>Scripts</span>
+  
+  <content>
+    {% for script in scripts %}
+    <span class='item'>{{ script }}</span>
+    {% endfor %}
+  </content>
+</pane>
+
+<pane>
+  <span class='logo'>Output</span>
+  
+  <content class='responses'>
+    <pre>shell ready</pre>
+  </content>
+</pane>
 
 
 <script>
@@ -100,12 +67,12 @@ content scripts h1{
   
   window.addEventListener('load', Init);
   function Init(){
-    responses = document.querySelector('responses');
+    responses = document.querySelector('.responses');
     BindScripts();
   }
   
   function BindScripts(){
-    var scripts = document.querySelectorAll('scripts item');
+    var scripts = document.querySelectorAll('.scripts span.item');
     for(var i=0,script; script=scripts[i++];)
       (function(script){
         script.addEventListener('click', function(){

@@ -1,11 +1,13 @@
-<sidebar>
+<pane>
   <a class='logo' href='./'>Venom</a>
   
-  <label>Development Tools</label>
-  <a class='item' href='scripts'><img src='images/scripts.svg'/>Scripts</a>
-  <a class='item' href='scaffold'><img src='images/scaffold.svg'/>Scaffold</a>
+  <content>
+    <label>Development Tools</label>
+    <a class='item {% if page == "scripts" %}active{% endif %}' href='scripts'><img src='images/scripts.svg'/>Scripts</a>
+    <a class='item {% if page == "scaffold" %}active{% endif %}' href='scaffold'><img src='images/scaffold.svg'/>Scaffold</a>
   
-  <label>Analytics</label>
-  <a class='item' href='endpoints'><img src='images/endpoints.svg'/>Endpoints</a>
-  <a class='item' href='models'><img src='images/models.svg'/>Models</a>
-</sidebar>
+    <label>Analytics</label>
+    <a class='item {% if page == "endpoints" %}active{% endif %}' href='endpoints'><img src='images/endpoints.svg'/>Endpoints</a>
+    <a class='item {% if page == "models" %}active{% endif %}' href='models'><img src='images/models.svg'/>Models</a>
+  </content>
+</pane>

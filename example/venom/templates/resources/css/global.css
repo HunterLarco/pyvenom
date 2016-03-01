@@ -8,43 +8,55 @@ body{
   color:rgb(51,51,51);
   background:rgb(245,245,245);
 }
-sidebar{
-  display:block;
+pane{
+  display:flex;
+  flex-direction:column;
   min-width:250px;
   
   box-shadow:inset -1px 0px 0px rgb(200,200,200);
-}
-content{
-  display:block;
-  flex:2;
   
   overflow:scroll;
 }
+pane:last-of-type{
+  flex:2;
+}
 
-sidebar .logo,
-sidebar label,
-sidebar .item{
+pane content{
+  flex:2;
+  overflow:scroll;
+}
+
+pane .logo,
+pane label,
+pane .item{
   display:block;
   padding:14px 16px;
   
   cursor:pointer;
 }
 
-sidebar .logo{
+pane .logo{
   font-size:18px;
   font-weight:700;
   
   color:rgba(255,255,255,0.95);
   background:rgb(59,120,231);
+  
+  border-right:1px solid rgb(88,140,234);
+  
+  cursor:default;
 }
-sidebar .logo:hover{
+pane a.logo{
+  cursor:pointer;
+}
+pane a.logo:hover{
   background:rgb(39,100,211);
 }
 
-sidebar .logo + label{
+pane label:first-of-type{
   border-top:none;
 }
-sidebar label{
+pane label{
   border-top:1px solid rgb(200,200,200);
   padding:10px;
   color:rgb(80,80,80);
@@ -54,7 +66,7 @@ sidebar label{
   
   cursor:default;
 }
-sidebar img{
+pane img{
   display:inline-block;
   vertical-align:middle;
   
@@ -63,20 +75,11 @@ sidebar img{
   padding-right:10px;
 }
 
-sidebar .item{
+pane .item{
   padding:14px 24px;
   margin-right:1px;
 }
-sidebar .item:hover{
+pane .item:hover,
+pane .item.active{
   background:rgb(230,230,230);
-}
-
-content centered{
-  display:flex;
-  flex-direction:row;
-  
-  width:100%;
-  max-width:900px;
-  min-width:400px;
-  margin:50px auto;
 }

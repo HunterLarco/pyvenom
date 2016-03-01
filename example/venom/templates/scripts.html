@@ -152,11 +152,55 @@ content pre{
       {% endfor %}
     </scripts>
     
-    <pre>&gt; output ...</pre>
+    <pre>shell ready<br/>===========</pre>
     
   </centered>
 </content>
 
 
+<script>
+(function(){
+  
+  var pre;
+  
+  window.addEventListener('load', Init);
+  function Init(){
+    pre = document.querySelector('pre');
+    BindScripts();
+  }
+  
+  function BindScripts(){
+    var scripts = document.querySelectorAll('scripts item');
+    for(var i=0,script; script=scripts[i++];)
+      (function(script){
+        script.addEventListener('click', function(){
+          
+          pre.innerHTML += '\n\n> EXECUTING ' + script.innerHTML
+          
+          fetch('scripts/execute/' + script.innerHTML, {
+          	method: 'post',
+            credentials: 'same-origin'
+          }).then(function(response) {
+	          return response.json();
+          }).then(function(json){
+            LogOutput(json)
+          }).catch(function(err) {
+          	// Error :(
+          });
+          
+        });
+      })(script);
+  }
+  function LogOutput(json){
+    for(var i=0; i<json.printed.length; i++){
+      var line = json.printed[i];
+      pre.innerHTML += '\n' + line;
+    }
+    pre.innerHTML += '\n< ' + json.returned;
+    pre.scrollTop = pre.scrollHeight
+  }
+  
+})();
+</script>
 </body>
 </html>

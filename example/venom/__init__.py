@@ -52,7 +52,6 @@ ui = webapp2.WSGIApplication([
 scripts = []
 
 def script(funct):
-  print('\n\nasd\n\n')
   scripts.append(funct)
   return funct
   

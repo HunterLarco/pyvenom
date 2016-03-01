@@ -61,6 +61,58 @@ sidebar item:hover{
   text-decoration:underline;
 }
 
+content centered{
+  display:flex;
+  flex-direction:row;
+  
+  max-width:900px;
+  margin:50px auto;
+}
+
+content scripts,
+content pre{
+  display:block;
+  
+  border:1px solid rgb(120,120,120);
+  margin:6px;
+  
+  height:400px;
+  overflow:scroll;
+}
+
+content scripts{
+  height:428px;
+}
+content scripts item,
+content scripts h1{
+  display:block;
+  
+  padding:10px 14px;
+  margin:0px;
+  
+  cursor:default;
+}
+content scripts item{
+  cursor:pointer;
+}
+content scripts item:hover{
+  text-decoration:underline;
+}
+content scripts h1{
+  background:rgb(51,51,51);
+  border-bottom:1px solid rgb(80,80,80);
+}
+
+content pre{
+  flex:2;
+  
+  padding:14px;
+  
+  font-family:monospace;
+  font-size:14px;
+  color:rgb(200,200,200);
+}
+
 </style>
 
 <title>Venom Scripts</title>
@@ -88,15 +140,21 @@ sidebar item:hover{
   <label>Analytics</label>
   <a href='endpoints'><item><img src='images/endpoints.svg'/>Endpoints</item></a>
   <a href='models'><item><img src='images/models.svg'/>Models</item></a>
-  
 </sidebar>
 
 <content>
-  {% for script in scripts %}
-
-  {{ script }}
-
-  {% endfor %}
+  <centered>
+    
+    <scripts>
+      <h1>Scripts</h1>
+      {% for script in scripts %}
+      <item>{{ script }}</item>
+      {% endfor %}
+    </scripts>
+    
+    <pre>&gt; output ...</pre>
+    
+  </centered>
 </content>
 
 

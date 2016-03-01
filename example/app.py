@@ -8,5 +8,11 @@ def test_script():
   return 2039438
 
 
+@venom.script
+def hello():
+  print('hello world')
+  return '...completed'
+
+
 import webapp2
 app = webapp2.WSGIApplication([], debug=True)

@@ -3,11 +3,84 @@
 <head>
 <style>
 
-pre{
+/*pre{
   display:block;
   padding:14px;
   margin:6px;
   border:1px solid rgb(200,200,200);
+
+  word-wrap: break-word;
+  word-break: break-all;
+  white-space: pre;
+
+  font-family:monospace;
+  font-size:14px;
+  color:rgb(102,102,102);
+}*/
+
+.form{
+  border-bottom:1px solid rgb(200,200,200);
+  
+  padding:8px 16px;
+}
+.form input[type=text],
+.form textarea{
+  display:block;
+  margin:8px 0px;
+  padding:8px 10px;
+  border:1px solid rgb(225,225,225);
+  width:100%;
+  outline:none;
+}
+.form button{
+  display:block;
+  margin:8px 0px;
+  padding:8px 10px;
+  border:1px solid rgb(225,225,225);
+  width:100%;
+  background:rgb(255,255,255);
+  cursor:pointer;
+}
+
+console{
+  display:block;
+}
+console header{
+  display:block;
+  background:rgb(230,230,230);
+  border-top:1px solid rgb(200,200,200);
+  padding:10px 0px;
+  
+  cursor:ns-resize;
+}
+console header div{
+  position:relative;
+  margin:0px auto;
+  height:1px;
+  width:30px;
+  
+  background:rgb(102,102,102);
+}
+console header div:after,
+console header div:before{
+  display:block;
+  content:'';
+  
+  position:absolute;
+  top:-3px;
+  left:0px;
+  width:100%;
+  height:1px;
+  
+  background:rgb(102,102,102);
+}
+console header div:after{
+  top:3px;
+}
+
+console pre{
+  display:block;
+  padding:14px;
   
   word-wrap: break-word;
   word-break: break-all;
@@ -16,6 +89,20 @@ pre{
   font-family:monospace;
   font-size:14px;
   color:rgb(102,102,102);
+}
+
+console pre.collapsed{
+  margin:0px 14px;
+  padding:9px 6px;
+  border-bottom:1px solid rgb(200,200,200);
+  
+  cursor:pointer;
+}
+console pre.collapsed:hover{
+  background:rgb(230,230,230);
+}
+console pre.collapsed preview{
+  display:block;
 }
 
 </style>
@@ -52,11 +139,17 @@ pre{
 </pane>
 
 <pane>
-  <span class='logo'>Output</span>
+  <span class='logo'>Script Setup</span>
   
-  <content class='responses'>
-    <pre>shell ready</pre>
-  </content>
+  <content class='responses'></content>
+  
+  <console>
+    <header><div></div></header>
+    <pre class='collapsed'><preview>analytics executed at 6:35:24</preview></pre>
+    <pre class='collapsed'><preview>analytics executed at 6:35:36</preview></pre>
+    <pre class='collapsed'><preview>analytics executed at 6:36:02</preview></pre>
+    <pre>> shell ready ...</pre>
+  </console>
 </pane>
 
 
@@ -76,6 +169,7 @@ pre{
     for(var i=0,script; script=scripts[i++];)
       (function(script){
         script.addEventListener('click', function(){
+          responses.scrollTop = 0;
           
           var pre = CreatePre();
           pre.write('> EXECUTING ' + script.innerHTML + ' at ' + GetTime());

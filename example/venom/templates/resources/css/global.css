@@ -44,6 +44,8 @@ pane .logo{
   
   border-right:1px solid rgb(88,140,234);
   
+  flex-shrink:0;
+  
   cursor:default;
 }
 pane a.logo{

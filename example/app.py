@@ -24,5 +24,12 @@ def generate_models():
   print('Done')
 
 
+@venom.script
+def analytics():
+  query = TestModel.query()
+  count = query.count()
+  print('TestModel Count: {}'.format(count))
+
+
 import webapp2
 app = webapp2.WSGIApplication([], debug=True)

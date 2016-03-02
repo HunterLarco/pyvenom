@@ -73,11 +73,25 @@ pane img{
   vertical-align:middle;
   
   height:24px;
-  width:24px;
+  width:auto;
   padding-right:10px;
 }
 
+pane .item.dots{
+  padding-left:0px;
+}
+pane .item.dots img{
+  cursor:move;
+  opacity:0;
+  padding-left:11px;
+  padding-right:9px;
+}
+pane .item.dots:hover img{
+  opacity:1;
+}
+
 pane .item{
+  position:relative;
   padding:14px 24px;
   margin-right:1px;
 }

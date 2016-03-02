@@ -3,7 +3,15 @@
 <head>
 <style>
 
-/*pre{
+.form pre{
+  display:block;
+  padding:14px;
+  
+  font-family:monospace;
+  font-size:14px;
+  color:rgb(102,102,102);
+}
+.responses pre{
   display:block;
   padding:14px;
   margin:6px;
@@ -16,12 +24,12 @@
   font-family:monospace;
   font-size:14px;
   color:rgb(102,102,102);
-}*/
+}
 
 .form{
   border-bottom:1px solid rgb(200,200,200);
   
-  padding:8px 16px;
+  flex-shrink:0;
 }
 .form input[type=text],
 .form textarea{
@@ -32,77 +40,38 @@
   width:100%;
   outline:none;
 }
-.form button{
-  display:block;
-  margin:8px 0px;
-  padding:8px 10px;
-  border:1px solid rgb(225,225,225);
-  width:100%;
-  background:rgb(255,255,255);
-  cursor:pointer;
-}
 
-console{
-  display:block;
-}
-console header{
-  display:block;
+.form header{
   background:rgb(230,230,230);
-  border-top:1px solid rgb(200,200,200);
-  padding:10px 0px;
   
-  cursor:ns-resize;
+  display:flex;
+  flex-direction:row;
 }
-console header div{
-  position:relative;
-  margin:0px auto;
-  height:1px;
-  width:30px;
-  
-  background:rgb(102,102,102);
+.form header h1,
+.form header button{
+  display:inline-block;
+  vertical-align:center;
+  margin:0px;
+  padding:12px 16px;
 }
-console header div:after,
-console header div:before{
+.form header h1{
+  flex:2;
+}
+.form header h1:after{
+  content:' script';
+}
+.form header button{
   display:block;
-  content:'';
-  
-  position:absolute;
-  top:-3px;
-  left:0px;
-  width:100%;
-  height:1px;
-  
-  background:rgb(102,102,102);
-}
-console header div:after{
-  top:3px;
-}
-
-console pre{
-  display:block;
-  padding:14px;
-  
-  word-wrap: break-word;
-  word-break: break-all;
-  white-space: pre;
-  
-  font-family:monospace;
-  font-size:14px;
-  color:rgb(102,102,102);
-}
-
-console pre.collapsed{
-  margin:0px 14px;
-  padding:9px 6px;
-  border-bottom:1px solid rgb(200,200,200);
-  
+  padding:7px 9px;
+  margin:5px 7px;
+  border:none;
+  background:rgb(225,225,225);
   cursor:pointer;
+  border:1px solid rgb(180,180,180);
 }
-console pre.collapsed:hover{
-  background:rgb(230,230,230);
-}
-console pre.collapsed preview{
-  display:block;
+.form header button:hover{
+  background:rgb(215,215,215);
+  border:1px solid rgb(160,160,160);
 }
 
 </style>
@@ -132,64 +101,111 @@ console pre.collapsed preview{
   <span class='logo'>Scripts</span>
   
   <content>
-    {% for script in scripts %}
-    <span class='item'>{{ script }}</span>
-    {% endfor %}
+    <!-- <span class='item dots'><img src='./images/dots.svg'/>{{ script }}</span> -->
+    <!-- <span class='item'>{{ script }}</span> -->
   </content>
 </pane>
+
 
 <pane>
   <span class='logo'>Script Setup</span>
   
-  <content class='responses'></content>
+  <div class='form'>
+    <header>
+      <h1>N/A</h1>
+      <button>Execute</button>
+    </header>
+    <pre>N/A</pre>
+    <!-- <input type='text' placeholder='Placeholder'/> -->
+  </div>
   
-  <console>
-    <header><div></div></header>
-    <pre class='collapsed'><preview>analytics executed at 6:35:24</preview></pre>
-    <pre class='collapsed'><preview>analytics executed at 6:35:36</preview></pre>
-    <pre class='collapsed'><preview>analytics executed at 6:36:02</preview></pre>
+  <content class='responses'>
     <pre>> shell ready ...</pre>
-  </console>
+  </content>
 </pane>
 
 
 <script>
 (function(){
   
+  var scripts = {{ scripts|safe }};
   var responses;
   
   window.addEventListener('load', Init);
   function Init(){
+    var spans = AddScripts();
+    BindClicks(spans);
+    if (spans.length > 0)
+      spans[0].click()
+    
+    var button = document.querySelector('.form header button');
+    button.addEventListener('click', ExecuteCurrentScript);
+    
     responses = document.querySelector('.responses');
-    BindScripts();
   }
   
-  function BindScripts(){
-    var scripts = document.querySelectorAll('.scripts span.item');
-    for(var i=0,script; script=scripts[i++];)
-      (function(script){
-        script.addEventListener('click', function(){
-          responses.scrollTop = 0;
-          
-          var pre = CreatePre();
-          pre.write('> EXECUTING ' + script.innerHTML + ' at ' + GetTime());
-          pre.pend();
-          
-          fetch('scripts/execute/' + script.innerHTML, {
-          	method: 'post',
-            credentials: 'same-origin'
-          }).then(function(response) {
-	          return response.json();
-          }).then(function(json){
-            LogOutput(pre, json)
-          }).catch(function(err) {
-            pre.stop();
-          	pre.write('< Unknown Error Before Script Execution');
-          });
-          
-        });
-      })(script);
+  var currentSpan;
+  
+  function AddScripts(){
+    var spans = [];
+    
+    var content = document.querySelector('.scripts content');
+    for(var i=0,script; script=scripts[i++];){
+      var span = document.createElement('span');
+      span.setAttribute('class', 'item');
+      span.innerHTML = script[0];
+      span.script = script;
+      content.appendChild(span);
+      spans.push(span);
+    }
+    
+    return spans;
   }
+  function BindClicks(spans){
+    for(var i=0,span; span=spans[i++];)
+      (function(span){
+        span.addEventListener('click', function(){
+          var active = document.querySelector('.scripts .item.active');
+          if (active) active.setAttribute('class', 'item');
+          span.setAttribute('class', 'item active');
+          ShowScript(span);
+        });
+      })(span);
+  }
+  function ShowScript(span){
+    currentSpan = span;
+    
+    var title = document.querySelector('.form header h1');
+    title.innerHTML = span.script[0];
+    
+    var docs = document.querySelector('.form pre');
+    docs.innerHTML = span.script[1];
+  }
+  function ExecuteCurrentScript(){
+    var script = currentSpan.script[0];
+    
+    responses.scrollTop = 0;
+    
+    var pre = CreatePre();
+    pre.write('> EXECUTING ' + script + ' at ' + GetTime());
+    pre.pend();
+    
+    fetch('scripts/execute/' + script, {
+    	method: 'post',
+      credentials: 'same-origin'
+    }).then(function(response) {
+      return response.json();
+    }).then(function(json){
+      LogOutput(pre, json)
+    }).catch(function(err) {
+      pre.stop();
+    	pre.write('< Unknown Error Before Script Execution');
+    });
+  }
+
+
+
+
   function GetTime(){
     var date = new Date();
     

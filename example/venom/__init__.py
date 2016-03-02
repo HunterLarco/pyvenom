@@ -33,7 +33,8 @@ class ResourceHandler(webapp2.RequestHandler):
 
 class ScriptsHandler(webapp2.RequestHandler):
   def get(self):
-    template_values = { 'scripts': sorted(scripts.keys()) }
+    templated = [[key, value[1]] for key, value in scripts.items()]
+    template_values = { 'scripts': sorted(templated) }
     path = os.path.join(os.path.dirname(__file__), 'templates/scripts.html')
     self.response.out.write(template.render(path, template_values))
 
@@ -68,7 +69,7 @@ class ScriptExecutionHandler(webapp2.RequestHandler):
   def post(self, script_name):
     if not script_name in scripts:
       return self.error(500)
-    script = scripts[script_name]
+    script = scripts[script_name][0]
     with Capturing() as printed:
       try:
         returned = script()
@@ -102,9 +103,15 @@ ui = webapp2.WSGIApplication([
 
 scripts = {}
 
-def script(funct):
-  scripts[funct.__name__] = funct
-  return funct
+def script(param):
+  if hasattr(param, '__call__'):
+    scripts[param.__name__] = (param, 'No Documentation')
+    return param
+  
+  def decorator(funct):
+    scripts[funct.__name__] = (funct, param)
+    return funct
+  return decorator
 
 
 import importutil

@@ -15,7 +15,7 @@
   display:block;
   padding:14px;
   margin:6px;
-  border:1px solid rgb(200,200,200);
+  border-left:4px solid rgb(200,200,200);
 
   word-wrap: break-word;
   word-break: break-all;
@@ -24,6 +24,13 @@
   font-family:monospace;
   font-size:14px;
   color:rgb(102,102,102);
+  
+  opacity:0.5;
+}
+.responses pre.current{
+  opacity:1;
+  border-left:4px solid rgb(59,120,231);
+  background:rgb(255,255,255);
 }
 
 .form{
@@ -175,6 +182,14 @@
   function ShowScript(span){
     currentSpan = span;
     
+    var pres = document.querySelectorAll('.responses pre');
+    for(var i=0,pre; pre=pres[i++];){
+      if(pre.getAttribute('scriptname') == span.script[0])
+        pre.setAttribute('class', 'current');
+      else
+        pre.removeAttribute('class');
+    }
+    
     var title = document.querySelector('.form header h1');
     title.innerHTML = span.script[0];
     
@@ -186,7 +201,7 @@
     
     responses.scrollTop = 0;
     
-    var pre = CreatePre();
+    var pre = CreatePre(script);
     pre.write('> EXECUTING ' + script + ' at ' + GetTime());
     pre.pend();
     
@@ -218,8 +233,10 @@
     return date.getHours() + ':' + minutes + ':' + seconds;
   }
   
-  function CreatePre(){
+  function CreatePre(script){
     var pre = document.createElement('pre');
+    pre.setAttribute('scriptname', script);
+    pre.setAttribute('class', 'current');
     
     var interval;
     var pending = ['/', '-', '\\', '|'];

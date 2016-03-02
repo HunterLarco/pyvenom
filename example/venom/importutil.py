@@ -8,7 +8,10 @@ def import_all():
   modules = find_files(path, pattern='*.py')
   for module in modules:
     name = file_to_module(module)
-    __import__(name, globals(), locals(), [], -1)
+    try:
+      __import__(name, globals(), locals(), [], -1)
+    except ImportError:
+      pass
 
 
 def find_files(directory, pattern='*'):

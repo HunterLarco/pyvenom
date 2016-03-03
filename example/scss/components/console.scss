@@ -1,0 +1,30 @@
+.Console {
+  
+}
+
+.Console-Item{
+  display:block;
+  padding:14px;
+  margin:6px;
+  border-left:4px solid rgb(200,200,200);
+
+  word-wrap: break-word;
+  word-break: break-all;
+  white-space: pre;
+
+  font-family:monospace;
+  font-size:14px;
+  color:rgb(102,102,102);
+}
+
+.Console-Item--Faded{
+  @extend .Console-Item;
+  opacity:0.5;
+}
+
+.Console-Item--Highlighted{
+  @extend .Console-Item;
+  opacity:1;
+  border-left:4px solid rgb(59,120,231);
+  background:rgb(255,255,255);
+}

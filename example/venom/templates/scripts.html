@@ -11,27 +11,6 @@
   font-size:14px;
   color:rgb(102,102,102);
 }
-.responses pre{
-  display:block;
-  padding:14px;
-  margin:6px;
-  border-left:4px solid rgb(200,200,200);
-
-  word-wrap: break-word;
-  word-break: break-all;
-  white-space: pre;
-
-  font-family:monospace;
-  font-size:14px;
-  color:rgb(102,102,102);
-  
-  opacity:0.5;
-}
-.responses pre.current{
-  opacity:1;
-  border-left:4px solid rgb(59,120,231);
-  background:rgb(255,255,255);
-}
 
 .form{
   border-bottom:1px solid rgb(200,200,200);
@@ -127,8 +106,8 @@
     <!-- <input type='text' placeholder='Placeholder'/> -->
   </div>
   
-  <div class='Pane-Content responses'>
-    <pre>> shell ready ...</pre>
+  <div class='Pane-Content Console responses'>
+    <div class='Console-Item--Faded'>> shell ready ...</div>
   </div>
 </div>
 
@@ -183,12 +162,16 @@
   function ShowScript(span){
     currentSpan = span;
     
-    var pres = document.querySelectorAll('.responses pre');
-    for(var i=0,pre; pre=pres[i++];){
+    var faded = document.querySelectorAll('.Console-Item--Faded');
+    var highlighted = document.querySelectorAll('.Console-Item--Highlighted');
+    
+    for(var i=0,pre; pre=faded[i++];){
       if(pre.getAttribute('scriptname') == span.script[0])
-        pre.setAttribute('class', 'current');
-      else
-        pre.removeAttribute('class');
+        pre.setAttribute('class', 'Console-Item--Highlighted');
+    }
+    
+    for(var i=0,pre; pre=highlighted[i++];){
+      pre.setAttribute('class', 'Console-Item--Faded');
     }
     
     var title = document.querySelector('.form header h1');
@@ -235,9 +218,9 @@
   }
   
   function CreatePre(script){
-    var pre = document.createElement('pre');
+    var pre = document.createElement('div');
     pre.setAttribute('scriptname', script);
-    pre.setAttribute('class', 'current');
+    pre.setAttribute('class', 'Console-Item--Highlighted');
     
     var interval;
     var pending = ['/', '-', '\\', '|'];

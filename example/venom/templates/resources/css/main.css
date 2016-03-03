@@ -161,3 +161,23 @@ a.Pane-Header:hover {
   -webkit-flex: 2;
       -ms-flex: 2;
           flex: 2; }
+
+.Console-Item, .Console-Item--Faded, .Console-Item--Highlighted {
+  display: block;
+  padding: 14px;
+  margin: 6px;
+  border-left: 4px solid #c8c8c8;
+  word-wrap: break-word;
+  word-break: break-all;
+  white-space: pre;
+  font-family: monospace;
+  font-size: 14px;
+  color: #666666; }
+
+.Console-Item--Faded {
+  opacity: 0.5; }
+
+.Console-Item--Highlighted {
+  opacity: 1;
+  border-left: 4px solid #3b78e7;
+  background: white; }

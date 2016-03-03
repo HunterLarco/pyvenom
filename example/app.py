@@ -29,12 +29,12 @@ def generate_models():
   print('Done')
 
 
-@venom.script(
-"""PURPOSE
+@venom.script
+def analytics():
+  """PURPOSE
   Total count of TestModel entities
 RETURNS
-  An integer count""")
-def analytics():
+  An integer count"""
   query = TestModel.query()
   count = query.count()
   print('TestModel Count: {}'.format(count))

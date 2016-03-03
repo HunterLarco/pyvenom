@@ -113,7 +113,7 @@ html {
           flex-direction: row;
   background: whitesmoke;
   color: #333333;
-  font-family: helvetica, Arial;
+  font-family: "Open Sans", "Helvetica", "Arial", sans-serif;
   font-size: 16px; }
 
 .Pane {
@@ -162,22 +162,24 @@ a.Pane-Header:hover {
       -ms-flex: 2;
           flex: 2; }
 
+.Console {
+  font-family: "Consolas", "Courier", monospace; }
+
 .Console-Item, .Console-Item--Faded, .Console-Item--Highlighted {
   display: block;
-  padding: 14px;
   margin: 6px;
+  padding: 14px;
   border-left: 4px solid #c8c8c8;
+  color: #666666;
+  white-space: pre;
   word-wrap: break-word;
   word-break: break-all;
-  white-space: pre;
-  font-family: monospace;
-  font-size: 14px;
-  color: #666666; }
+  font-size: 14px; }
 
 .Console-Item--Faded {
   opacity: 0.5; }
 
 .Console-Item--Highlighted {
-  opacity: 1;
   border-left: 4px solid #3b78e7;
-  background: white; }
+  background: white;
+  opacity: 1; }

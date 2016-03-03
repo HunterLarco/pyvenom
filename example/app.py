@@ -15,6 +15,11 @@ def query_models():
 
 
 @venom.script
+def foo():
+  return 'Hello Fero'
+
+
+@venom.script
 def generate_models():
   print('Starting')
   for i in range(100):
@@ -22,6 +27,17 @@ def generate_models():
     model.test = '123'
     model.put()
   print('Done')
+
+
+@venom.script(
+"""PURPOSE
+  Total count of TestModel entities
+RETURNS
+  An integer count""")
+def analytics():
+  query = TestModel.query()
+  count = query.count()
+  print('TestModel Count: {}'.format(count))
 
 
 import webapp2

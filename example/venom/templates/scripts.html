@@ -3,15 +3,9 @@
 <head>
 <style>
 
-pre{
+.Form pre{
   display:block;
   padding:14px;
-  margin:6px;
-  border:1px solid rgb(200,200,200);
-  
-  word-wrap: break-word;
-  word-break: break-all;
-  white-space: pre;
   
   font-family:monospace;
   font-size:14px;
@@ -29,11 +23,10 @@ pre{
 
 <meta content='minimum-scale=1.0, width=device-width, maximum-scale=1, user-scalable=no' name='viewport'/>
 
-<link rel='stylesheet' href='resources/css/resets.css'/>
-<link rel='stylesheet' href='resources/css/global.css'/>
+<link rel='stylesheet' href='resources/css/main.css'/>
 
 </head>
-<body>
+<body class='Pane-Frame'>
 
 
 {% with 'scripts' as page %}
@@ -41,61 +34,123 @@ pre{
 {% endwith %}
 
 
-<pane class='scripts'>
-  <span class='logo'>Scripts</span>
-  
-  <content>
-    {% for script in scripts %}
-    <span class='item'>{{ script }}</span>
-    {% endfor %}
-  </content>
-</pane>
+<div class='Pane scripts'>
+  <div class='Pane-Header'>Scripts</div>
+  <div class='Pane-Content Nav'></div>
+</div>
 
-<pane>
-  <span class='logo'>Output</span>
+
+<div class='Pane'>
+  <div class='Pane-Header'>Script Setup</div>
   
-  <content class='responses'>
-    <pre>shell ready</pre>
-  </content>
-</pane>
+  <div class='Pane-Bar Form'>
+    <div class='Form-Header'>
+      <span class='Form-Header-Item'>N/A</span>
+      <span class='Form-Header-Button'>Execute</span>
+    </div>
+    <pre>N/A</pre>
+    <!-- <input type='text' placeholder='Placeholder'/> -->
+  </div>
+  
+  <div class='Pane-Content Console responses'>
+    <div class='Console-Item--Faded'>> shell ready ...</div>
+  </div>
+</div>
 
 
 <script>
 (function(){
   
+  var scripts = {{ scripts|safe }};
   var responses;
   
   window.addEventListener('load', Init);
   function Init(){
+    var spans = AddScripts();
+    BindClicks(spans);
+    if (spans.length > 0)
+      spans[0].click()
+    
+    var button = document.querySelector('.Form-Header-Button');
+    button.addEventListener('click', ExecuteCurrentScript);
+    
     responses = document.querySelector('.responses');
-    BindScripts();
   }
   
-  function BindScripts(){
-    var scripts = document.querySelectorAll('.scripts span.item');
-    for(var i=0,script; script=scripts[i++];)
-      (function(script){
-        script.addEventListener('click', function(){
-          
-          var pre = CreatePre();
-          pre.write('> EXECUTING ' + script.innerHTML + ' at ' + GetTime());
-          pre.pend();
-          
-          fetch('scripts/execute/' + script.innerHTML, {
-          	method: 'post',
-            credentials: 'same-origin'
-          }).then(function(response) {
-	          return response.json();
-          }).then(function(json){
-            LogOutput(pre, json)
-          }).catch(function(err) {
-            pre.stop();
-          	pre.write('< Unknown Error Before Script Execution');
-          });
-          
-        });
-      })(script);
+  var currentSpan;
+  
+  function AddScripts(){
+    var spans = [];
+    
+    var content = document.querySelector('.scripts .Pane-Content');
+    for(var i=0,script; script=scripts[i++];){
+      var span = document.createElement('div');
+      span.setAttribute('class', 'Nav-Item');
+      span.innerHTML = script[0];
+      span.script = script;
+      content.appendChild(span);
+      spans.push(span);
+    }
+    
+    return spans;
   }
+  function BindClicks(spans){
+    for(var i=0,span; span=spans[i++];)
+      (function(span){
+        span.addEventListener('click', function(){
+          var active = document.querySelector('.scripts .Nav-Item--Active');
+          if (active) active.setAttribute('class', 'Nav-Item');
+          span.setAttribute('class', 'Nav-Item--Active');
+          ShowScript(span);
+        });
+      })(span);
+  }
+  function ShowScript(span){
+    currentSpan = span;
+    
+    var faded = document.querySelectorAll('.Console-Item--Faded');
+    var highlighted = document.querySelectorAll('.Console-Item--Highlighted');
+    
+    for(var i=0,pre; pre=faded[i++];){
+      if(pre.getAttribute('scriptname') == span.script[0])
+        pre.setAttribute('class', 'Console-Item--Highlighted');
+    }
+    
+    for(var i=0,pre; pre=highlighted[i++];){
+      pre.setAttribute('class', 'Console-Item--Faded');
+    }
+    
+    var title = document.querySelector('.Form-Header-Item');
+    title.innerHTML = span.script[0] + ' script';
+    
+    var docs = document.querySelector('.Form pre');
+    docs.innerHTML = span.script[1];
+  }
+  function ExecuteCurrentScript(){
+    var script = currentSpan.script[0];
+    
+    responses.scrollTop = 0;
+    
+    var pre = CreatePre(script);
+    pre.write('> EXECUTING ' + script + ' at ' + GetTime());
+    pre.pend();
+    
+    fetch('scripts/execute/' + script, {
+    	method: 'post',
+      credentials: 'same-origin'
+    }).then(function(response) {
+      return response.json();
+    }).then(function(json){
+      LogOutput(pre, json)
+    }).catch(function(err) {
+      pre.stop();
+    	pre.write('< Unknown Error Before Script Execution');
+    });
+  }
+
+
+
+
   function GetTime(){
     var date = new Date();
     
@@ -108,8 +163,10 @@ pre{
     return date.getHours() + ':' + minutes + ':' + seconds;
   }
   
-  function CreatePre(){
-    var pre = document.createElement('pre');
+  function CreatePre(script){
+    var pre = document.createElement('div');
+    pre.setAttribute('scriptname', script);
+    pre.setAttribute('class', 'Console-Item--Highlighted');
     
     var interval;
     var pending = ['/', '-', '\\', '|'];

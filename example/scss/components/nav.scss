@@ -1,0 +1,46 @@
+@import '../settings/font-sizes';
+
+.Nav {
+
+	.Nav-Label {
+
+		&:first-of-type {
+			border-top: none;
+		}
+	}
+}
+
+.Nav-Item {
+	display: block;
+	margin-right: 1px;
+	padding: 14px 24px;
+	cursor: pointer;
+
+	img {
+		@extend .NotBox;
+		display: inline-block;
+		padding-right: 10px;
+		width: 24px;
+		height: 24px;
+		vertical-align: middle;
+	}
+
+	&:hover {
+		background: rgb(230,230,230);
+	}
+}
+
+.Nav-Item--Active {
+	@extend .Nav-Item;
+	background: rgb(230,230,230);
+}
+
+.Nav-Label {
+	display: block;
+	padding: 10px;
+	border-top: 1px solid rgb(200,200,200);
+	color: rgb(80,80,80);
+	text-transform: uppercase;
+	font-size: $font-size-70;
+	cursor: default;
+}

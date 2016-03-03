@@ -6,20 +6,35 @@ import webapp2
 import os
 import mimetypes
 import json
+import email.Utils
+import time
+
+
+mimetypes.add_type("image/svg+xml", ".svg")
 
 
 class ResourceHandler(webapp2.RequestHandler):
   def get(self, folder, path):
-    path = os.path.join(os.path.dirname(__file__), 'templates/{}/{}'.format(folder, path))
-    file = open(path, 'r').read()
-    mime = mimetypes.guess_type(path)
-    self.response.headers['Content-Type'] = mime[0]
-    self.response.out.write(file)
+    here = os.path.dirname(__file__)
+    fn = os.path.join(here, 'templates/{}/{}'.format(folder, path))
+    ctype, encoding = mimetypes.guess_type(fn)
+    assert ctype and '/' in ctype, repr(ctype)
+    expiry = 3600
+    expiration = email.Utils.formatdate(time.time() + expiry, usegmt=True)
+    fp = open(fn, 'rb')
+    try:
+      self.response.out.write(fp.read())
+    finally:
+      fp.close()
+    self.response.headers['Content-type'] = ctype
+    self.response.headers['Cache-Control'] = 'public, max-age=expiry'
+    self.response.headers['Expires'] = expiration
 
 
 class ScriptsHandler(webapp2.RequestHandler):
   def get(self):
-    template_values = { 'scripts': sorted(scripts.keys()) }
+    templated = [[key, value[1]] for key, value in scripts.items()]
+    template_values = { 'scripts': sorted(templated) }
     path = os.path.join(os.path.dirname(__file__), 'templates/scripts.html')
     self.response.out.write(template.render(path, template_values))
 
@@ -54,7 +69,7 @@ class ScriptExecutionHandler(webapp2.RequestHandler):
   def post(self, script_name):
     if not script_name in scripts:
       return self.error(500)
-    script = scripts[script_name]
+    script = scripts[script_name][0]
     with Capturing() as printed:
       try:
         returned = script()
@@ -88,9 +103,15 @@ ui = webapp2.WSGIApplication([
 
 scripts = {}
 
-def script(funct):
-  scripts[funct.__name__] = funct
-  return funct
+def script(param):
+  if hasattr(param, '__call__'):
+    scripts[param.__name__] = (param, 'No Documentation')
+    return param
+  
+  def decorator(funct):
+    scripts[funct.__name__] = (funct, param)
+    return funct
+  return decorator
 
 
 import importutil

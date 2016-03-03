@@ -39,6 +39,13 @@ class ScriptsHandler(webapp2.RequestHandler):
     self.response.out.write(template.render(path, template_values))
 
 
+class ScaffoldHandler(webapp2.RequestHandler):
+  def get(self):
+    template_values = {}
+    path = os.path.join(os.path.dirname(__file__), 'templates/scaffold.html')
+    self.response.out.write(template.render(path, template_values))
+
+
 class MainHandler(webapp2.RequestHandler):
   def get(self):
     if not self.request.path.endswith('/'):
@@ -89,7 +96,8 @@ class ScriptExecutionHandler(webapp2.RequestHandler):
 
 ui = webapp2.WSGIApplication([
   ('.*/(resources|images)/(.*)', ResourceHandler),
-  ('.*/scripts/?', ScriptsHandler),
+  ('.*/scripts', ScriptsHandler),
+  ('.*/scaffold', ScaffoldHandler),
   ('.*/scripts/execute/([^/]+)/?', ScriptExecutionHandler),
   ('.*', MainHandler)
 ], debug=True)

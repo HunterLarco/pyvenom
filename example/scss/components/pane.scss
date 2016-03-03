@@ -42,6 +42,10 @@ a.Pane-Header:hover {
 	background: rgb(39,100,211);
 }
 
+.Pane-Bar {
+	flex-shrink: 0;
+}
+
 .Pane-Content {
 	overflow: scroll;
 	flex: 2;

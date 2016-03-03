@@ -92,11 +92,12 @@
 
 <meta content='minimum-scale=1.0, width=device-width, maximum-scale=1, user-scalable=no' name='viewport'/>
 
-<link rel='stylesheet' href='resources/css/resets.css'/>
-<link rel='stylesheet' href='resources/css/global.css'/>
+<link rel='stylesheet' href='resources/css/main.css'/>
+<!-- <link rel='stylesheet' href='resources/css/resets.css'/> -->
+<!-- <link rel='stylesheet' href='resources/css/global.css'/> -->
 
 </head>
-<body>
+<body class='Pane-Frame'>
 
 
 {% with 'scripts' as page %}
@@ -104,18 +105,18 @@
 {% endwith %}
 
 
-<pane class='scripts'>
-  <span class='logo'>Scripts</span>
+<div class='Pane scripts'>
+  <div class='Pane-Header'>Scripts</div>
   
-  <content>
+  <div class='Pane-Content Nav'>
     <!-- <span class='item dots'><img src='./images/dots.svg'/>{{ script }}</span> -->
     <!-- <span class='item'>{{ script }}</span> -->
-  </content>
-</pane>
+  </div>
+</div>
 
 
-<pane>
-  <span class='logo'>Script Setup</span>
+<div class='Pane'>
+  <div class='Pane-Header'>Script Setup</div>
   
   <div class='form'>
     <header>
@@ -126,10 +127,10 @@
     <!-- <input type='text' placeholder='Placeholder'/> -->
   </div>
   
-  <content class='responses'>
+  <div class='Pane-Content responses'>
     <pre>> shell ready ...</pre>
-  </content>
-</pane>
+  </div>
+</div>
 
 
 <script>
@@ -156,10 +157,10 @@
   function AddScripts(){
     var spans = [];
     
-    var content = document.querySelector('.scripts content');
+    var content = document.querySelector('.scripts .Pane-Content');
     for(var i=0,script; script=scripts[i++];){
-      var span = document.createElement('span');
-      span.setAttribute('class', 'item');
+      var span = document.createElement('div');
+      span.setAttribute('class', 'Nav-Item');
       span.innerHTML = script[0];
       span.script = script;
       content.appendChild(span);
@@ -172,9 +173,9 @@
     for(var i=0,span; span=spans[i++];)
       (function(span){
         span.addEventListener('click', function(){
-          var active = document.querySelector('.scripts .item.active');
-          if (active) active.setAttribute('class', 'item');
-          span.setAttribute('class', 'item active');
+          var active = document.querySelector('.scripts .Nav-Item--Active');
+          if (active) active.setAttribute('class', 'Nav-Item');
+          span.setAttribute('class', 'Nav-Item--Active');
           ShowScript(span);
         });
       })(span);

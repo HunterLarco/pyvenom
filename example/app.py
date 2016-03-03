@@ -15,6 +15,11 @@ def query_models():
 
 
 @venom.script
+def foo():
+  return 'Hello Fero'
+
+
+@venom.script
 def generate_models():
   print('Starting')
   for i in range(100):

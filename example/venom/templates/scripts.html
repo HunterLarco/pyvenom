@@ -3,75 +3,13 @@
 <head>
 <style>
 
-.form pre{
+.Form pre{
   display:block;
   padding:14px;
   
   font-family:monospace;
   font-size:14px;
   color:rgb(102,102,102);
-}
-.responses pre{
-  display:block;
-  padding:14px;
-  margin:6px;
-  border:1px solid rgb(200,200,200);
-
-  word-wrap: break-word;
-  word-break: break-all;
-  white-space: pre;
-
-  font-family:monospace;
-  font-size:14px;
-  color:rgb(102,102,102);
-}
-
-.form{
-  border-bottom:1px solid rgb(200,200,200);
-  
-  flex-shrink:0;
-}
-.form input[type=text],
-.form textarea{
-  display:block;
-  margin:8px 0px;
-  padding:8px 10px;
-  border:1px solid rgb(225,225,225);
-  width:100%;
-  outline:none;
-}
-
-.form header{
-  background:rgb(230,230,230);
-  
-  display:flex;
-  flex-direction:row;
-}
-.form header h1,
-.form header button{
-  display:inline-block;
-  vertical-align:center;
-  margin:0px;
-  padding:12px 16px;
-}
-.form header h1{
-  flex:2;
-}
-.form header h1:after{
-  content:' script';
-}
-.form header button{
-  display:block;
-  padding:7px 9px;
-  margin:5px 7px;
-  border:none;
-  background:rgb(225,225,225);
-  cursor:pointer;
-  border:1px solid rgb(180,180,180);
-}
-.form header button:hover{
-  background:rgb(215,215,215);
-  border:1px solid rgb(160,160,160);
 }
 
 </style>
@@ -85,11 +23,10 @@
 
 <meta content='minimum-scale=1.0, width=device-width, maximum-scale=1, user-scalable=no' name='viewport'/>
 
-<link rel='stylesheet' href='resources/css/resets.css'/>
-<link rel='stylesheet' href='resources/css/global.css'/>
+<link rel='stylesheet' href='resources/css/main.css'/>
 
 </head>
-<body>
+<body class='Pane-Frame'>
 
 
 {% with 'scripts' as page %}
@@ -97,32 +34,28 @@
 {% endwith %}
 
 
-<pane class='scripts'>
-  <span class='logo'>Scripts</span>
-  
-  <content>
-    <!-- <span class='item dots'><img src='./images/dots.svg'/>{{ script }}</span> -->
-    <!-- <span class='item'>{{ script }}</span> -->
-  </content>
-</pane>
+<div class='Pane scripts'>
+  <div class='Pane-Header'>Scripts</div>
+  <div class='Pane-Content Nav'></div>
+</div>
 
 
-<pane>
-  <span class='logo'>Script Setup</span>
+<div class='Pane'>
+  <div class='Pane-Header'>Script Setup</div>
   
-  <div class='form'>
-    <header>
-      <h1>N/A</h1>
-      <button>Execute</button>
-    </header>
+  <div class='Pane-Bar Form'>
+    <div class='Form-Header'>
+      <span class='Form-Header-Item'>N/A</span>
+      <span class='Form-Header-Button'>Execute</span>
+    </div>
     <pre>N/A</pre>
     <!-- <input type='text' placeholder='Placeholder'/> -->
   </div>
   
-  <content class='responses'>
-    <pre>> shell ready ...</pre>
-  </content>
-</pane>
+  <div class='Pane-Content Console responses'>
+    <div class='Console-Item--Faded'>> shell ready ...</div>
+  </div>
+</div>
 
 
 <script>
@@ -138,7 +71,7 @@
     if (spans.length > 0)
       spans[0].click()
     
-    var button = document.querySelector('.form header button');
+    var button = document.querySelector('.Form-Header-Button');
     button.addEventListener('click', ExecuteCurrentScript);
     
     responses = document.querySelector('.responses');
@@ -149,10 +82,10 @@
   function AddScripts(){
     var spans = [];
     
-    var content = document.querySelector('.scripts content');
+    var content = document.querySelector('.scripts .Pane-Content');
     for(var i=0,script; script=scripts[i++];){
-      var span = document.createElement('span');
-      span.setAttribute('class', 'item');
+      var span = document.createElement('div');
+      span.setAttribute('class', 'Nav-Item');
       span.innerHTML = script[0];
       span.script = script;
       content.appendChild(span);
@@ -165,9 +98,9 @@
     for(var i=0,span; span=spans[i++];)
       (function(span){
         span.addEventListener('click', function(){
-          var active = document.querySelector('.scripts .item.active');
-          if (active) active.setAttribute('class', 'item');
-          span.setAttribute('class', 'item active');
+          var active = document.querySelector('.scripts .Nav-Item--Active');
+          if (active) active.setAttribute('class', 'Nav-Item');
+          span.setAttribute('class', 'Nav-Item--Active');
           ShowScript(span);
         });
       })(span);
@@ -175,10 +108,22 @@
   function ShowScript(span){
     currentSpan = span;
     
-    var title = document.querySelector('.form header h1');
-    title.innerHTML = span.script[0];
+    var faded = document.querySelectorAll('.Console-Item--Faded');
+    var highlighted = document.querySelectorAll('.Console-Item--Highlighted');
     
-    var docs = document.querySelector('.form pre');
+    for(var i=0,pre; pre=faded[i++];){
+      if(pre.getAttribute('scriptname') == span.script[0])
+        pre.setAttribute('class', 'Console-Item--Highlighted');
+    }
+    
+    for(var i=0,pre; pre=highlighted[i++];){
+      pre.setAttribute('class', 'Console-Item--Faded');
+    }
+    
+    var title = document.querySelector('.Form-Header-Item');
+    title.innerHTML = span.script[0] + ' script';
+    
+    var docs = document.querySelector('.Form pre');
     docs.innerHTML = span.script[1];
   }
   function ExecuteCurrentScript(){
@@ -186,7 +131,7 @@
     
     responses.scrollTop = 0;
     
-    var pre = CreatePre();
+    var pre = CreatePre(script);
     pre.write('> EXECUTING ' + script + ' at ' + GetTime());
     pre.pend();
     
@@ -218,8 +163,10 @@
     return date.getHours() + ':' + minutes + ':' + seconds;
   }
   
-  function CreatePre(){
-    var pre = document.createElement('pre');
+  function CreatePre(script){
+    var pre = document.createElement('div');
+    pre.setAttribute('scriptname', script);
+    pre.setAttribute('class', 'Console-Item--Highlighted');
     
     var interval;
     var pending = ['/', '-', '\\', '|'];

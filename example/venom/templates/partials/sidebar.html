@@ -1,13 +1,13 @@
-<pane>
-  <a class='logo' href='./'>Venom</a>
+<div class='Pane'>
+  <a class='Pane-Header' href='./'>Venom</a>
   
-  <content>
-    <label>Development Tools</label>
-    <a class='item {% if page == "scripts" %}active{% endif %}' href='scripts'><img src='images/scripts.svg'/>Scripts</a>
-    <a class='item {% if page == "scaffold" %}active{% endif %}' href='scaffold'><img src='images/scaffold.svg'/>Scaffold</a>
+  <div class='Pane-Content Nav'>
+    <div class='Nav-Label'>Development Tools</div>
+    <a class='Nav-Item{% if page == "scripts" %}--Active{% endif %}' href='scripts'><img src='images/scripts.svg'/>Scripts</a>
+    <a class='Nav-Item{% if page == "scaffold" %}--Active{% endif %}' href='scaffold'><img src='images/scaffold.svg'/>Scaffold</a>
   
-    <label>Analytics</label>
-    <a class='item {% if page == "endpoints" %}active{% endif %}' href='endpoints'><img src='images/endpoints.svg'/>Endpoints</a>
-    <a class='item {% if page == "models" %}active{% endif %}' href='models'><img src='images/models.svg'/>Models</a>
-  </content>
-</pane>
+    <div class='Nav-Label'>Analytics</div>
+    <a class='Nav-Item{% if page == "endpoints" %}--Active{% endif %}' href='endpoints'><img src='images/endpoints.svg'/>Endpoints</a>
+    <a class='Nav-Item{% if page == "models" %}--Active{% endif %}' href='models'><img src='images/models.svg'/>Models</a>
+  </div>
+</div>

@@ -72,9 +72,6 @@ html {
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased; }
 
-.Nav .Nav-Label:first-of-type {
-  border-top: none; }
-
 .Nav-Item, .Nav-Item--Active {
   display: block;
   margin-right: 1px;
@@ -92,7 +89,7 @@ html {
 .Nav-Item--Active {
   background: #e6e6e6; }
 
-.Nav-Label {
+.Nav-Label, .Nav-Label--NoBorder {
   display: block;
   padding: 10px;
   border-top: 1px solid #c8c8c8;
@@ -100,6 +97,9 @@ html {
   text-transform: uppercase;
   font-size: 12px;
   cursor: default; }
+
+.Nav-Label--NoBorder {
+  border-top: none; }
 
 .Pane-Frame {
   display: -webkit-box;

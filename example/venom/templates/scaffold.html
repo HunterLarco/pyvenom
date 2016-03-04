@@ -12,6 +12,7 @@
 <meta content='minimum-scale=1.0, width=device-width, maximum-scale=1, user-scalable=no' name='viewport'/>
 
 <link rel='stylesheet' href='resources/css/main.css'/>
+<script src='resources/js/search.js'></script>
 
 </head>
 <body class='Pane-Frame'>
@@ -22,10 +23,16 @@
 {% endwith %}
 
 
-<div class='Pane'>
+<div class='Pane templates'>
   <div class='Pane-Header'>Templates</div>
   <div class='Pane-Content Nav'>
-    <div class='Nav-Label'>Packages</div>
+    <div class='Search'>
+      <input class='Search-Input' type='text' placeholder='Search'/>
+    </div>
+      
+    <div class='Nav-Label--NoBorder'>Used Scaffolds</div>
+    
+    <div class='Nav-Label'>Services</div>
     <div class='Nav-Item'>Users</div>
     <div class='Nav-Item'>Postable Content</div>
     
@@ -47,5 +54,27 @@
 </div>
 
 
+<script>
+(function(){
+  
+  window.addEventListener('load', Init);
+  function Init(){
+    var input = document.querySelector('.Search-Input');
+    var searchbar = new SearchBar(input);
+    searchbar.getter(SearchBarGetter);
+    searchbar.filter(SearchBarFilter);
+  }
+  
+  function SearchBarGetter(){
+    return document.querySelectorAll('.templates .Nav-Item');
+  }
+  function SearchBarFilter(value, span){
+    var value = value.toLowerCase();
+    var content = span.innerHTML.toLowerCase();
+    span.style.display = content.indexOf(value) == -1 ? 'None' : 'Block';
+  }
+  
+})();
+</script
 </body>
 </html>

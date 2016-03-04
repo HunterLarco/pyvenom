@@ -1,6 +1,8 @@
 {
   "name": "venom",
   "version": "1.0.0",
+  "private": true,
+  "repository": "http://github.com/HunterLarco/pyvenom",
   "scripts": {
     "comb": "gulp",
     "start": "dev_appserver.py . | open http://localhost:8080/venom",

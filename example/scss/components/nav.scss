@@ -1,13 +1,7 @@
 @import '../settings/font-sizes';
 
 .Nav {
-
-	.Nav-Label {
-
-		&:first-of-type {
-			border-top: none;
-		}
-	}
+  
 }
 
 .Nav-Item {
@@ -43,4 +37,9 @@
 	text-transform: uppercase;
 	font-size: $font-size-70;
 	cursor: default;
+}
+
+.Nav-Label--NoBorder {
+	@extend .Nav-Label;
+	border-top: none;
 }

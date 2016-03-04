@@ -24,6 +24,7 @@
 <meta content='minimum-scale=1.0, width=device-width, maximum-scale=1, user-scalable=no' name='viewport'/>
 
 <link rel='stylesheet' href='resources/css/main.css'/>
+<script src='resources/js/search.js'></script>
 
 </head>
 <body class='Pane-Frame'>
@@ -79,9 +80,9 @@
     var button = document.querySelector('.Form-Header-Button');
     button.addEventListener('click', ExecuteCurrentScript);
     
-    var input = document.querySelector('.Search-Input');
-    input.addEventListener('keypress', UpdateSearchBar);
-    input.addEventListener('keyup', UpdateSearchBar);
+    var input = new SearchBar(document.querySelector('.Search-Input'));
+    input.getter(SearchBarGetter);
+    input.filter(SearchBarFilter);
     
     responses = document.querySelector('.responses');
   }
@@ -158,16 +159,14 @@
   }
 
 
-
-  function UpdateSearchBar(event){
-    var input = event.target;
-    var value = input.value.toLowerCase();
-    for(var i=0,span; span=spans[i++];){
-      var content = span.innerHTML.toLowerCase();
-      span.style.display = content.indexOf(value) == -1 ? 'None' : 'Block';
-    }
+  function SearchBarGetter(){
+    return spans;
   }
-
+  function SearchBarFilter(value, span){
+    var value = value.toLowerCase();
+    var content = span.innerHTML.toLowerCase();
+    span.style.display = content.indexOf(value) == -1 ? 'None' : 'Block';
+  }
 
 
   function GetTime(){

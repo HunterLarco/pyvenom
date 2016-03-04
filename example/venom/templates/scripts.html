@@ -24,6 +24,7 @@
 <meta content='minimum-scale=1.0, width=device-width, maximum-scale=1, user-scalable=no' name='viewport'/>
 
 <link rel='stylesheet' href='resources/css/main.css'/>
+<script src='resources/js/search.js'></script>
 
 </head>
 <body class='Pane-Frame'>
@@ -36,7 +37,11 @@
 
 <div class='Pane scripts'>
   <div class='Pane-Header'>Scripts</div>
-  <div class='Pane-Content Nav'></div>
+  <div class='Pane-Content Nav'>
+    <div class='Search'>
+      <input type='text' class='Search-Input' placeholder='Search'/>
+    </div>
+  </div>
 </div>
 
 
@@ -63,16 +68,21 @@
   
   var scripts = {{ scripts|safe }};
   var responses;
+  var spans = [];
   
   window.addEventListener('load', Init);
   function Init(){
-    var spans = AddScripts();
+    spans = AddScripts();
     BindClicks(spans);
     if (spans.length > 0)
       spans[0].click()
     
     var button = document.querySelector('.Form-Header-Button');
     button.addEventListener('click', ExecuteCurrentScript);
+    
+    var input = new SearchBar(document.querySelector('.Search-Input'));
+    input.getter(SearchBarGetter);
+    input.filter(SearchBarFilter);
     
     responses = document.querySelector('.responses');
   }
@@ -149,6 +159,14 @@
   }
 
 
+  function SearchBarGetter(){
+    return spans;
+  }
+  function SearchBarFilter(value, span){
+    var value = value.toLowerCase();
+    var content = span.innerHTML.toLowerCase();
+    span.style.display = content.indexOf(value) == -1 ? 'None' : 'Block';
+  }
 
 
   function GetTime(){

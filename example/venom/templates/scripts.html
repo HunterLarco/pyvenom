@@ -67,16 +67,21 @@
   
   var scripts = {{ scripts|safe }};
   var responses;
+  var spans = [];
   
   window.addEventListener('load', Init);
   function Init(){
-    var spans = AddScripts();
+    spans = AddScripts();
     BindClicks(spans);
     if (spans.length > 0)
       spans[0].click()
     
     var button = document.querySelector('.Form-Header-Button');
     button.addEventListener('click', ExecuteCurrentScript);
+    
+    var input = document.querySelector('.Search-Input');
+    input.addEventListener('keypress', UpdateSearchBar);
+    input.addEventListener('keyup', UpdateSearchBar);
     
     responses = document.querySelector('.responses');
   }
@@ -152,6 +157,16 @@
     });
   }
 
+
+
+  function UpdateSearchBar(event){
+    var input = event.target;
+    var value = input.value.toLowerCase();
+    for(var i=0,span; span=spans[i++];){
+      var content = span.innerHTML.toLowerCase();
+      span.style.display = content.indexOf(value) == -1 ? 'None' : 'Block';
+    }
+  }
 
 
 

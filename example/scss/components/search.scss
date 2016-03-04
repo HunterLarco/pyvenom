@@ -1,0 +1,17 @@
+.Search {
+	display: block;
+	margin-right: 1px;
+	background: rgb(255,255,255);
+}
+
+.Search-Input {
+	display: block;
+	padding: 8px 10px;
+	width: 100%;
+	outline: none;
+	border: none;
+	border-bottom: 1px solid rgb(200,200,200);
+	background: none;
+	color: rgb(102,102,102);
+	font-size: $font-size-90;
+}

@@ -236,3 +236,19 @@ a.Pane-Header:hover {
   .Form-Header-Button:hover {
     border: 1px solid #a0a0a0;
     background: #d7d7d7; }
+
+.Search {
+  display: block;
+  margin-right: 1px;
+  background: white; }
+
+.Search-Input {
+  display: block;
+  padding: 6px 10px;
+  width: 100%;
+  outline: none;
+  border: none;
+  border-bottom: 1px solid #c8c8c8;
+  background: none;
+  color: #666666;
+  font-size: 14px; }

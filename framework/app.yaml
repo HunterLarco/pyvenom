@@ -1,0 +1,19 @@
+application: use-pyvenom
+version: 0-0-0
+runtime: python27
+api_version: 1
+threadsafe: yes
+
+handlers:
+# MAIN SCRIPT
+- url: .*
+  script: app.app
+
+# LIBRARIES
+libraries:
+- name: webapp2
+  version: "2.5.1"
+
+builtins:
+- remote_api: on
+- appstats: on

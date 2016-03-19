@@ -1,4 +1,5 @@
-__all__ = []
+__all__ = ['scaffold']
+import scaffold
 
 
 from google.appengine.ext.webapp import template

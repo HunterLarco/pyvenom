@@ -20,9 +20,14 @@ def foo():
 
 
 @venom.script
+def bar():
+  return 'Hello Jakey-poo!'
+
+
+@venom.script
 def generate_models():
   print('Starting')
-  for i in range(100):
+  for i in range(1000):
     model = TestModel()
     model.test = '123'
     model.put()

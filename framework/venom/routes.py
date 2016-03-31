@@ -52,18 +52,7 @@ class Route(object):
     return variables
   
   def dispatch(self, webapp2_request):
-    url_variables = self.get_url_variables(webapp2_request.path)
-    sanitized_url_variables = self._url.dispatch(url_variables)
-    
-    try:
-      body = json.loads(webapp2_request.body)
-    except:
-      body = webapp2_request.POST
-    
-    sanitized_body = self._body.dispatch(body)
-    sanitized_query = self._query.dispatch(webapp2_request.GET)
-    
-    return self.handler(webapp2_request).dispatch()
+    return self.handler(self, webapp2_request).dispatch()
     
   def url(self, params):
     if isinstance(params, dict):

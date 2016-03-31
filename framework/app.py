@@ -18,19 +18,18 @@ import venom
 
 
 
-class TestHandlerGeneric(venom.RequestHandler):
+
+class ServerHandler(venom.RequestHandler):
   def get(self):
-    # TODO
-    # do thing
-
-    # device = Device.getByKey(filekey)
-    # return
-    return venom.Protocols.JSONProtocol({
-      'data': 123
+    return venom.Protocols.XMLProtocol({
+      'data': {
+        'query': self.query,
+        'url': self.url,
+        'body': self.body
+      }
+    }, headers={
+      'test-header': '123'
     })
-
-
-
 
 
 
@@ -38,15 +37,13 @@ app = venom.Server(debug=True)
 
 
 
-app.GET('/buckets/v1/serve/:filekey', TestHandlerGeneric).url({
-  'filekey': venom.Parameters.Float()
-})
 
-
-app.POST('/buckets/v1/serve', TestHandlerGeneric).body({
-  'otherthing': venom.Parameters.String(min=4, max=56),
-  'thing': venom.Parameters.List({
-    'test1': venom.Parameters.Int(),
-    'test2': venom.Parameters.Int()
-  }, min=2, max=5, required=False)
-})
+app.GET('/buckets/v1/serve/:fileid', ServerHandler).url({
+  'fileid': venom.Parameters.Int(min=0)
+}).query({
+  'test': venom.Parameters.Float(min=0, max=4)
+})# .body({
+#   'thing': venom.Parameters.List({
+#     'test1': venom.Parameters.String(choices=['abc', 'dba'])
+#   }, required=False)
+# }, protocol=XMLProtocol)

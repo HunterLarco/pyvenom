@@ -30,7 +30,12 @@ class Protocol(object):
     except Exception:
       raise ProtocolWriteFailed('Protocol write failed')
   
+  def pre(self, value):
+    if not value: return {}
+    return value
+  
   def _pre_write(self, value):
+    value = self.pre(value)
     value['success'] = self._success
     self.write(value)
   
@@ -41,11 +46,19 @@ class Protocol(object):
     return self
   
   def __exit__(self, exception_type, exception_value, traceback):
+    """
+    ' This function catches all exceptions raised while using
+    ' the protocol. Because of this, the first error is caught and
+    ' we try to response with the formatted error using the protocol.
+    ' However in the case that formatting the error fails, an internal
+    ' server error is thrown and nothing is written to the response body.
+    """
     if not exception_type: return
     self.error(500)
     if not self._success: return False
     self._success = False
     self._pre_write({
+      'type': exception_type.__name__,
       'message': exception_value.message
     })
     return True# suppresses exception
@@ -58,6 +71,5 @@ class JSONProtocol(Protocol):
     return loads(value)
   
   def write(self, value):
-    if not value: value = {}
     from json import dumps
     self.response.write(dumps(value, indent=2))

@@ -9,7 +9,7 @@ app = venom.VersionDispatcher(appv1, appv2)
 
 
 class DefaultHandlerV1(venom.RequestHandler):
-  def get(self):
+  def post(self):
     return {
       'test': {
         'thing': 123
@@ -25,7 +25,7 @@ class DefaultHandlerV2(venom.RequestHandler):
 
 
 
-appv1.GET('/serve/:fileid', DefaultHandlerV1)
+appv1.POST('/serve/:fileid', DefaultHandlerV1)
 appv2.GET('/serve/', DefaultHandlerV2)
 
 

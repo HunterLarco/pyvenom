@@ -55,7 +55,8 @@ class Route(object):
   def execute(self, request, response, error):
     with self.protocol(request, response, error) as proto:
       body = proto._read(request.body)
-      returned = self.handler(self, request, response, error).dispatch()
+      handler = self.handler(self, request, response, error)
+      returned = handler.dispatch()
       proto._catch_write(returned)
     # return self.handler(self, request, response, error).dispatch()
     

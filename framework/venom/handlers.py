@@ -1,6 +1,10 @@
 __all__ = ['RequestHandler']
 
 
+class HTTPMethodNotImplemented(Exception):
+  pass
+
+
 class RequestHandler(object):
   def __init__(self, route, request, response, error):
     self.route = route
@@ -10,4 +14,4 @@ class RequestHandler(object):
     method = self.method.lower()
     if hasattr(self, method):
       return getattr(self, method)()
-    raise NotImplementedError()
+    raise HTTPMethodNotImplemented('HTTP Method {} not implemented when expected'.format(method.upper()))

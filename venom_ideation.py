@@ -80,3 +80,51 @@ app = venom(modules=[
   ('/', TestHandlerGeneric),
   ('/:filekey/?', TestHandler)
 ], debug=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+import venom
+
+
+
+class DefaultHandler(venom.RequestHandler):
+  def get(self):
+    return venom.Protocols.JSONProtocol({
+      'data': {
+        'url': self.url,
+        'query': self.query
+      }
+    })
+
+
+
+app = venom.Server(debug=True)
+
+
+
+router = app.Route('/buckets/v1/serve/:fileid', DefaultHandler)
+
+
+router.GET.url({
+  'fileid': venom.Parameters.Int(min=4, max=100)
+}).query({
+  'test': venom.Parameters.Float(required=False),
+  'test2': venom.Parameters.List({
+    'thing': venom.Parameters.Float()
+  })
+})# .body({
+#   'items': venom.Parameters.List({
+#     'title': venom.Parameters.String(min=4),
+#     'description': venom.Parameters.String(min=4)
+#   }, min=1)
+# })

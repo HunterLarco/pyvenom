@@ -1,0 +1,8 @@
+MANIFEST.in
+setup.cfg
+setup.py
+pyvenom/__init__.py
+pyvenom.egg-info/PKG-INFO
+pyvenom.egg-info/SOURCES.txt
+pyvenom.egg-info/dependency_links.txt
+pyvenom.egg-info/top_level.txt

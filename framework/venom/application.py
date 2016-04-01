@@ -4,7 +4,15 @@ __all__ = ['Application']
 # application imports
 from wsgi_entry import WSGIEntryPoint
 import routes
+import Protocols
+from handlers import RequestHandler
 
+
+class MetaRouteHandler(RequestHandler):
+  def dispatch(self):
+    return {
+      'meta': True
+    }
 
 
 class Application(WSGIEntryPoint):
@@ -30,10 +38,19 @@ class Application(WSGIEntryPoint):
         return
     error(404)
   
+  def _add_meta_route(self, path, handler, protocol):
+    path = '/meta/v{}/{}'.format(self.version, path)
+    route = routes.Route(path, MetaRouteHandler, Protocols.JSONProtocol)
+    self.routes.append(route)
+    return route
+  
   def _add_route(self, path, handler, protocol, route_cls):
     if not protocol: protocol = self.protocol
     if path.startswith('/'): path = path[1:]
-    path = '/api/v{}/'.format(self.version) + path
+    
+    self._add_meta_route(path, handler, protocol)
+    
+    path = '/api/v{}/{}'.format(self.version, path)
     route = route_cls(path, handler, protocol)
     self.routes.append(route)
     return route

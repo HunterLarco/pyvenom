@@ -7,7 +7,7 @@ threadsafe: yes
 handlers:
 # MAIN SCRIPT
 - url: .*
-  script: app.appv1
+  script: app.app
 
 # LIBRARIES
 libraries:

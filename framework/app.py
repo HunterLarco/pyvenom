@@ -1,6 +1,22 @@
 import venom
 
 
+appv1 = venom.Application(version=1, debug=True)
+appv2 = venom.Application(version=1.2, debug=True)
+
+app = venom.VersionDispatcher(appv1, appv2)
+
+
+
+appv1.GET('/serve/:fileid', None)
+appv2.GET('/serve/', None)
+
+
+
+
+"""import venom
+
+
 
 class DefaultHandler(venom.RequestHandler):
   def get(self):
@@ -28,4 +44,4 @@ appv1.GET('serve/:fileid', DefaultHandler).url({
 
 appv2.GET('serve/:fileid', DefaultHandler).url({
   'fileid': venom.Parameters.Int(min=1, max=10)
-})
+})"""

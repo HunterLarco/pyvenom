@@ -1,9 +1,11 @@
-__all__ = ['Route', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD']
+__all__ = ['Route', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE']
 
 
+# system imports
 import json
 
-import Parameters
+# application imports
+# import Parameters
 
 
 class Route(object):
@@ -12,47 +14,46 @@ class Route(object):
   def __init__(self, path, handler):
     self.method = self.DEFAULT_METHOD
     self.path = path
-    self._url = Parameters.Dict({})
-    self._body = Parameters.Dict({})
-    self._query = Parameters.Dict({})
+    # self._url = Parameters.Dict({})
+    # self._body = Parameters.Dict({})
+    # self._query = Parameters.Dict({})
     self.handler = handler
   
-  def matches(self, path, method):
-    if self.method.lower() != method.lower(): return False
-    
+  def sanitize_path(self, path):
     if path.endswith('/'): path = path[:-1]
-    
-    templatefolders = self.path.split('/')
-    folders = path.split('/')
-    
-    if len(templatefolders) != len(folders): return False
-    
-    for templatefolder, folder in zip(templatefolders, folders):
-      if not templatefolder.startswith(':') and  templatefolder != folder:
-        return False
-    
-    return True
+    if path.startswith('/'): path = path[1:]
+    return path
   
-  def get_url_variables(self, path):
+  def matches(self, request):
+    return self.get_url_variables(request) is not None
+  
+  def get_url_variables(self, request):
+    path = request.path
+    method = request.method
+    
+    if self.method and self.method.lower() != method.lower(): return None
+    
     variables = {}
     
-    if path.endswith('/'): path = path[:-1]
+    live_path = self.sanitize_path(path)
+    route_path = self.sanitize_path(self.path)
     
-    templatefolders = self.path.split('/')
-    folders = path.split('/')
+    live_sections = live_path.split('/')
+    route_sections = route_path.split('/')
     
-    if len(templatefolders) != len(folders): return False
+    if len(live_sections) != len(route_sections): return None
     
-    for templatefolder, folder in zip(templatefolders, folders):
-      if templatefolder.startswith(':'):
-        variables[templatefolder[1:]] = folder
-      elif templatefolder != folder:
+    for live_section, route_section in zip(live_sections, route_sections):
+      if route_section.startswith(':'):
+        variables[route_section[1:]] = live_section
+      elif live_section != route_section:
         return None
     
     return variables
   
-  def dispatch(self, webapp2_request, path):
-    return self.handler(self, webapp2_request, path).dispatch()
+  def execute(self, request, response, error):
+    response.write('FOUND {}'.format(self.path))
+    # return self.handler(self, request, response, error).dispatch()
     
   def url(self, params):
     if isinstance(params, dict):
@@ -93,6 +94,9 @@ class OPTIONS(Route):
 
 class HEAD(Route):
   DEFAULT_METHOD = 'HEAD'
+
+class TRACE(Route):
+  DEFAULT_METHOD = 'TRACE'
 
 
 

@@ -1,8 +1,8 @@
 import venom
 
 
-appv1 = venom.Application(version=1, debug=True)
-appv2 = venom.Application(version=1.2, debug=True)
+appv1 = venom.Application(version=1, debug=True, protocol=venom.Protocols.JSONProtocol)
+appv2 = venom.Application(version=1.2, debug=True, protocol=venom.Protocols.JSONProtocol)
 
 app = venom.VersionDispatcher(appv1, appv2)
 
@@ -25,8 +25,8 @@ class DefaultHandlerV2(venom.RequestHandler):
 
 
 
-appv1.GET('/serve/:fileid', DefaultHandlerV1, venom.Protocols.JSONProtocol)
-appv2.GET('/serve/', DefaultHandlerV2, venom.Protocols.JSONProtocol)
+appv1.GET('/serve/:fileid', DefaultHandlerV1)
+appv2.GET('/serve/', DefaultHandlerV2)
 
 
 

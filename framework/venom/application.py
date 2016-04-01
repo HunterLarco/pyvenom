@@ -10,11 +10,12 @@ import routes
 class Application(WSGIEntryPoint):
   allowable_prefixes = frozenset(('api', 'meta', 'docs'))
   
-  def __init__(self, routes=None, version=1, debug=False):
+  def __init__(self, routes=None, version=1, debug=False, protocol=None):
     super(Application, self).__init__()
     self.routes = routes if routes else []
     self.version = version
     self.debug = debug
+    self.protocol = protocol
   
   def matches_prefix(self, path):
     for prefix in self.allowable_prefixes:
@@ -30,33 +31,34 @@ class Application(WSGIEntryPoint):
     error(404)
   
   def _add_route(self, path, handler, protocol, route_cls):
+    if not protocol: protocol = self.protocol
     if path.startswith('/'): path = path[1:]
     path = '/api/v{}/'.format(self.version) + path
     route = route_cls(path, handler, protocol)
     self.routes.append(route)
     return route
   
-  def GET(self, path, handler, protocol):
+  def GET(self, path, handler, protocol=None):
     return self._add_route(path, handler, protocol, routes.GET)
   
-  def POST(self, path, handler, protocol):
+  def POST(self, path, handler, protocol=None):
     return self._add_route(path, handler, protocol, routes.POST)
   
-  def PUT(self, path, handler, protocol):
+  def PUT(self, path, handler, protocol=None):
     return self._add_route(path, handler, protocol, routes.PUT)
   
-  def PATCH(self, path, handler, protocol):
+  def PATCH(self, path, handler, protocol=None):
     return self._add_route(path, handler, protocol, routes.PATCH)
   
-  def HEAD(self, path, handler, protocol):
+  def HEAD(self, path, handler, protocol=None):
     return self._add_route(path, handler, protocol, routes.HEAD)
   
-  def DELETE(self, path, handler, protocol):
+  def DELETE(self, path, handler, protocol=None):
     return self._add_route(path, handler, protocol, routes.DELETE)
   
-  def OPTIONS(self, path, handler, protocol):
+  def OPTIONS(self, path, handler, protocol=None):
     return self._add_route(path, handler, protocol, routes.OPTIONS)
   
-  def TRACE(self, path, handler, protocol):
+  def TRACE(self, path, handler, protocol=None):
     return self._add_route(path, handler, protocol, routes.TRACE)
   

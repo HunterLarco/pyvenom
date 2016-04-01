@@ -19,4 +19,4 @@ class RequestHandler(object):
     method = self.method.lower()
     if hasattr(self, method):
       return getattr(self, method)()
-    raise NotImplemented()
+    raise NotImplementedError()

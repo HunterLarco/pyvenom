@@ -29,34 +29,34 @@ class Application(WSGIEntryPoint):
         return
     error(404)
   
-  def _add_route(self, path, handler, route_cls):
+  def _add_route(self, path, handler, protocol, route_cls):
     if path.startswith('/'): path = path[1:]
     path = '/api/v{}/'.format(self.version) + path
-    route = route_cls(path, handler)
+    route = route_cls(path, handler, protocol)
     self.routes.append(route)
     return route
   
-  def GET(self, path, handler):
-    return self._add_route(path, handler, routes.GET)
+  def GET(self, path, handler, protocol):
+    return self._add_route(path, handler, protocol, routes.GET)
   
-  def POST(self, path, handler):
-    return self._add_route(path, handler, routes.POST)
+  def POST(self, path, handler, protocol):
+    return self._add_route(path, handler, protocol, routes.POST)
   
-  def PUT(self, path, handler):
-    return self._add_route(path, handler, routes.PUT)
+  def PUT(self, path, handler, protocol):
+    return self._add_route(path, handler, protocol, routes.PUT)
   
-  def PATCH(self, path, handler):
-    return self._add_route(path, handler, routes.PATCH)
+  def PATCH(self, path, handler, protocol):
+    return self._add_route(path, handler, protocol, routes.PATCH)
   
-  def HEAD(self, path, handler):
-    return self._add_route(path, handler, routes.HEAD)
+  def HEAD(self, path, handler, protocol):
+    return self._add_route(path, handler, protocol, routes.HEAD)
   
-  def DELETE(self, path, handler):
-    return self._add_route(path, handler, routes.DELETE)
+  def DELETE(self, path, handler, protocol):
+    return self._add_route(path, handler, protocol, routes.DELETE)
   
-  def OPTIONS(self, path, handler):
-    return self._add_route(path, handler, routes.OPTIONS)
+  def OPTIONS(self, path, handler, protocol):
+    return self._add_route(path, handler, protocol, routes.OPTIONS)
   
-  def TRACE(self, path, handler):
-    return self._add_route(path, handler, routes.TRACE)
+  def TRACE(self, path, handler, protocol):
+    return self._add_route(path, handler, protocol, routes.TRACE)
   

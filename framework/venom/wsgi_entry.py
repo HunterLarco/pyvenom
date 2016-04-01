@@ -13,7 +13,7 @@ class WSGIEntryPoint(object):
     self.wsgi.allowed_methods = self.allowed_methods
   
   def _on_entry(self):
-    raise NotImplemented()
+    raise NotImplementedError()
   
   def _form_request_handler(self):
     wsgientry = self

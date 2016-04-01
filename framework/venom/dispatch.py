@@ -26,7 +26,7 @@ class Dispatcher(WSGIEntryPoint):
     self.error = None
   
   def dispatch(self):
-    raise NotImplemented()
+    raise NotImplementedError()
 
 
 class VersionDispatcher(Dispatcher):

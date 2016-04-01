@@ -49,17 +49,17 @@ class Parameter(object):
     return value
   
   def cast(self, value):
-    raise NotImplemented()
+    raise NotImplementedError()
   
   def sanitize(self, value):
-    raise NotImplemented()
+    raise NotImplementedError()
   
   def __repr__(self):
     options = 'required=' + str(self.required)
     return 'Parameter({})'.format(options)
   
   def metadict(self):
-    raise NotImplemented()
+    raise NotImplementedError()
 
 
 class String(Parameter):

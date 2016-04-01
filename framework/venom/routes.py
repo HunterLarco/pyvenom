@@ -11,13 +11,14 @@ import json
 class Route(object):
   DEFAULT_METHOD = None
   
-  def __init__(self, path, handler):
+  def __init__(self, path, handler, protocol):
     self.method = self.DEFAULT_METHOD
     self.path = path
     # self._url = Parameters.Dict({})
     # self._body = Parameters.Dict({})
     # self._query = Parameters.Dict({})
     self.handler = handler
+    self.protocol = protocol
   
   def sanitize_path(self, path):
     if path.endswith('/'): path = path[:-1]
@@ -52,7 +53,10 @@ class Route(object):
     return variables
   
   def execute(self, request, response, error):
-    response.write('FOUND {}'.format(self.path))
+    with self.protocol(request, response, error) as proto:
+      body = proto._read(request.body)
+      returned = self.handler(self, request, response, error).dispatch()
+      proto._write(returned)
     # return self.handler(self, request, response, error).dispatch()
     
   def url(self, params):

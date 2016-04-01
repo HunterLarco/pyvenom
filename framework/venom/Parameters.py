@@ -1,4 +1,4 @@
-__all__ = ['Parameter', 'String', 'Int', 'Float', 'List']
+__all__ = ['Parameter', 'String', 'Int', 'Float', 'List', 'ParameterSanitizationException', 'ParameterCastingException', 'ParameterRequiredException']
 
 
 class ParameterSanitizationException(Exception):

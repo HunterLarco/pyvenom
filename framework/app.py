@@ -13,20 +13,19 @@ class DefaultHandler(venom.RequestHandler):
 
 
 
-app = venom.Server(version=1.6, debug=True)
+appv1 = venom.Application(version=1, debug=True)
+appv2 = venom.Application(version=2, debug=True)
+
+# app = venom.serve(appv1, appv2)
 
 
 
-app.GET('serve/:fileid', DefaultHandler).url({
+appv1.GET('serve/:fileid', DefaultHandler).url({
   'fileid': venom.Parameters.Int(min=4, max=100)
 }).query({
   'test': venom.Parameters.Float()
-  # 'test2': venom.Parameters.List({
-    # 'thing': venom.Parameters.Float()
-  # }, required=False)
-})# .body({
-#   'items': venom.Parameters.List({
-#     'title': venom.Parameters.String(min=4),
-#     'description': venom.Parameters.String(min=4)
-#   }, min=1)
-# })
+})
+
+appv2.GET('serve/:fileid', DefaultHandler).url({
+  'fileid': venom.Parameters.Int(min=1, max=10)
+})

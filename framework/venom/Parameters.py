@@ -11,6 +11,15 @@ class ParameterRequiredException(Exception):
   pass
 
 
+def removenull(obj):
+  for key, value in obj.items():
+    if value == None:
+      del obj[key]
+    if isinstance(value, dict):
+      removenull(value)
+  return obj
+
+
 class Parameter(object):
   def __init__(self, required=True):
     self.required = required
@@ -48,6 +57,9 @@ class Parameter(object):
   def __repr__(self):
     options = 'required=' + str(self.required)
     return 'Parameter({})'.format(options)
+  
+  def metadict(self):
+    raise NotImplemented()
 
 
 class String(Parameter):
@@ -98,6 +110,16 @@ class String(Parameter):
     if self.characters != None: options += 'characters=' + str(self.characters) + ', '
     options += 'required=' + str(self.required) + ', '
     return 'StringParameter({})'.format(options[:-2])
+  
+  def metadict(self):
+    return removenull({
+      'type': 'string',
+      'min': self.min,
+      'max': self.max,
+      'characters': self.characters,
+      'choices': self.choices,
+      'required': self.required
+    })
 
 
 class Int(Parameter):
@@ -138,6 +160,15 @@ class Int(Parameter):
     if self.choices != None: options += 'choices=' + str(self.choices) + ', '
     options += 'required=' + str(self.required) + ', '
     return 'IntParameter({})'.format(options[:-2])
+  
+  def metadict(self):
+    return removenull({
+      'type': 'int',
+      'min': self.min,
+      'max': self.max,
+      'choices': self.choices,
+      'required': self.required
+    })
 
 
 class Float(Int):
@@ -151,10 +182,19 @@ class Float(Int):
     if self.choices != None: options += 'choices=' + str(self.choices) + ', '
     options += 'required=' + str(self.required) + ', '
     return 'FloatParameter({})'.format(options[:-2])
+  
+  def metadict(self):
+    return removenull({
+      'type': 'float',
+      'min': self.min,
+      'max': self.max,
+      'choices': self.choices,
+      'required': self.required
+    })
 
 
 class Dict(Parameter):
-  def __init__(self, template, min=None, max=None, required=True):
+  def __init__(self, template, required=True):
     super(Dict, self).__init__(required=required)
     self.template = template
   
@@ -165,14 +205,25 @@ class Dict(Parameter):
     for key, value in self.template.items():
       if isinstance(value, Parameter):
         if not key in passedDict:
-          raise ParameterSanitizationException('Dict missing expected parameter {}'.format(key))
-        passedDict[key] = value.dispatch(passedDict[key])
+          if value.required:
+            raise ParameterSanitizationException('Dict missing expected parameter {}'.format(key))
+        else:
+          passedDict[key] = value.dispatch(passedDict[key])
       elif isinstance(value, dict):
         self.__class__(value).dispatch(passedDict[key])
     return passedDict
   
   def __repr__(self):
     return 'DictParameter({})'.format(str(self.template))
+  
+  def metadict(self):
+    return removenull({
+      'type': 'dict',
+      'required': self.required,
+      'children': dict(
+        [(key, value.metadict()) for key, value in self.template.items()]
+      )
+    })
 
 
 class List(Parameter):
@@ -186,9 +237,9 @@ class List(Parameter):
     return list(value)
   
   def sanitize(self, arr):
-    if len(arr) < self.min:
+    if self.min is not None and len(arr) < self.min:
       raise ParameterSanitizationException('List length was less than minimum')
-    if len(arr) > self.max:
+    if self.max is not None and len(arr) > self.max:
       raise ParameterSanitizationException('List length exceeded maximum')
     
     dictparam = Dict(self.template)
@@ -198,3 +249,12 @@ class List(Parameter):
   
   def __repr__(self):
     return 'ListParameter({})'.format(str(self.template))
+  
+  def metadict(self):
+    return removenull({
+      'type': 'list',
+      'min': self.min,
+      'max': self.min,
+      'required': self.required,
+      'template': Dict(self.template).metadict()
+    })

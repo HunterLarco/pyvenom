@@ -1,4 +1,4 @@
-__all__ = ['Route', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+__all__ = ['Route', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD']
 
 
 import json
@@ -17,9 +17,7 @@ class Route(object):
     self._query = Parameters.Dict({})
     self.handler = handler
   
-  def matches(self, path, method):
-    if self.method and method.upper() != self.method.upper(): return False
-    
+  def matches(self, path):
     if path.endswith('/'): path = path[:-1]
     
     templatefolders = self.path.split('/')
@@ -90,6 +88,9 @@ class DELETE(Route):
 
 class OPTIONS(Route):
   DEFAULT_METHOD = 'OPTIONS'
+
+class HEAD(Route):
+  DEFAULT_METHOD = 'HEAD'
 
 
 

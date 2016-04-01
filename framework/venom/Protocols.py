@@ -19,6 +19,8 @@ class Protocol(object):
 class TextProtocol(Protocol):
   def __init__(self, data, headers=None):
     super(TextProtocol, self).__init__(headers)
+    if not 'Content-Type' in self.headers:
+      self.headers['Content-Type'] = 'text/plain'
     self.data = data
   
   def read(self, string):
@@ -33,7 +35,8 @@ class TextProtocol(Protocol):
 class JSONProtocol(Protocol):
   def __init__(self, data, headers=None):
     super(JSONProtocol, self).__init__(headers)
-    self.headers['Content-Type'] = 'application/json'
+    if not 'Content-Type' in self.headers:
+      self.headers['Content-Type'] = 'application/json'
     self.data = data
   
   def read(self, string):
@@ -111,7 +114,8 @@ class XmlDictConfig(dict):
 class XMLProtocol(Protocol):
   def __init__(self, data, headers=None):
     super(XMLProtocol, self).__init__(headers)
-    self.headers['Content-Type'] = 'application/xml'
+    if not 'Content-Type' in self.headers:
+      self.headers['Content-Type'] = 'application/xml'
     self.data = data
   
   def xml_to_dict(self, xmlstring):

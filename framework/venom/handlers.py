@@ -2,11 +2,11 @@ __all__ = ['RequestHandler']
 
 
 class RequestHandler(object):
-  def __init__(self, route, webapp2_request):
-    self.path = webapp2_request.path
+  def __init__(self, route, webapp2_request, path):
+    self.path = path
     self.method = webapp2_request.method.lower()
     self.route = route
-    self.url = route._url.dispatch(route.get_url_variables(webapp2_request.path))
+    self.url = route._url.dispatch(route.get_url_variables(self.path))
     self.query = route._query.dispatch(webapp2_request.GET)
     
     try:

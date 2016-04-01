@@ -13,17 +13,17 @@ class DefaultHandler(venom.RequestHandler):
 
 
 
-app = venom.Server(debug=True)
+app = venom.Server(version=1.6, debug=True)
 
 
 
-app.GET('/buckets/v1/serve/:fileid', DefaultHandler).url({
+app.GET('serve/:fileid', DefaultHandler).url({
   'fileid': venom.Parameters.Int(min=4, max=100)
 }).query({
-  'test': venom.Parameters.Float(),
-  'test2': venom.Parameters.List({
-    'thing': venom.Parameters.Float()
-  }, required=False)
+  'test': venom.Parameters.Float()
+  # 'test2': venom.Parameters.List({
+    # 'thing': venom.Parameters.Float()
+  # }, required=False)
 })# .body({
 #   'items': venom.Parameters.List({
 #     'title': venom.Parameters.String(min=4),

@@ -17,7 +17,9 @@ class Route(object):
     self._query = Parameters.Dict({})
     self.handler = handler
   
-  def matches(self, path):
+  def matches(self, path, method):
+    if self.method.lower() != method.lower(): return False
+    
     if path.endswith('/'): path = path[:-1]
     
     templatefolders = self.path.split('/')
@@ -49,8 +51,8 @@ class Route(object):
     
     return variables
   
-  def dispatch(self, webapp2_request):
-    return self.handler(self, webapp2_request).dispatch()
+  def dispatch(self, webapp2_request, path):
+    return self.handler(self, webapp2_request, path).dispatch()
     
   def url(self, params):
     if isinstance(params, dict):

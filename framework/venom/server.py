@@ -8,12 +8,15 @@ __all__ = ['Server']
 
 
 class Server(object):
-  def __init__(self, routes=None, debug=False):
+  def __init__(self, version=1, routes=None, debug=False):
+    self.version = version
+    self.api_prefix = '/api/v{}/'.format(version)
+    self.meta_prefix = '/meta/v{}/'.format(version)
+    self.docs_prefix = '/docs/v{}/'.format(version)
     self.routes = routes if routes else []
     self.debug = debug
     self._form_request_handler()
     self.wsgi = webapp2.WSGIApplication([('.*', self._entrypoint)], debug=False)
-    self.wsgi.allowed_methods = frozenset(('GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'META'))
   
   def GET(self, *args, **kwargs):
     route = routes.GET(*args, **kwargs)
@@ -64,24 +67,44 @@ class Server(object):
     if not protocol: protocol = Protocols.Protocol()
     protocol.write(response, error)
   
-  def route(self, request, response, error):
+  def _clean_path(self, path):
+    if path.startswith(self.api_prefix):
+      path = path[len(self.api_prefix):]
+    elif path.startswith(self.meta_prefix):
+      path = path[len(self.meta_prefix):]
+    elif path.startswith(self.docs_prefix):
+      path = path[len(self.docs_prefix):]
+    return path
+  
+  def _get_route_from_path(self, path, method):
     for route in self.routes:
-      if route.matches(request.path):
-        if request.method.upper() == 'META':
-          protocol = Protocols.JSONProtocol({
-            'parameters': {
-              'body': route._body.metadict()['children'],
-              'url': route._url.metadict()['children'],
-              'query': route._query.metadict()['children']
-            },
-            'path': route.path
-          })
-          self.write_protocol(protocol, request, response, error)
-          return
-        if route.method and route.method.upper() == request.method.upper():
-          protocol = route.dispatch(request)
-          self.write_protocol(protocol, request, response, error)
-          return
-    error(404)
-    response.write('404 Not Found')
+      if route.matches(path, method):
+        return route
+  
+  def route(self, request, response, error):
+    path = self._clean_path(request.path)
+    route = self._get_route_from_path(path, request.method)
+    
+    if not route:
+      error(404)
+      response.write('404 Not Found')
+      return
+    
+    if request.path.startswith(self.api_prefix):
+      protocol = route.dispatch(request, path)
+    elif request.path.startswith(self.meta_prefix):
+      protocol = Protocols.JSONProtocol({
+        'parameters': {
+          'body': route._body.metadict()['children'],
+          'url': route._url.metadict()['children'],
+          'query': route._query.metadict()['children']
+        },
+        'path': route.path
+      })
+    elif request.path.startswith(self.docs_prefix):
+      protocol = Protocols.TextProtocol('In Progress')
+    else:
+      protocol = Protocols.TextProtocol('Unknown Prefix')
+    
+    self.write_protocol(protocol, request, response, error)
       

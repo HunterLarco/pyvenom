@@ -138,7 +138,7 @@ class String(Parameter):
     self._options['characters'] = characters
   
   def cast(self, value):
-    return value
+    return str(value)
   
   def enforce(self, value):
     self.enforce_minimum(value)
@@ -195,7 +195,7 @@ class Dict(Parameter):
           raise Exception('Unknown Dict parameter template value')
   
   def cast(self, value):
-    return value
+    return dict(value)
   
   def enforce(self, dict_value):
     for key, param in self.template.items():
@@ -248,7 +248,7 @@ class List(Parameter):
     return removenull({
       'type': 'list',
       'min': self.min,
-      'max': self.min,
+      'max': self.max,
       'required': self.required,
       'template': self.template.to_meta_dict()
     })

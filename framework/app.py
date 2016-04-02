@@ -11,8 +11,8 @@ app = venom.VersionDispatcher(appv1, appv2)
 class DefaultHandlerV1(venom.RequestHandler):
   def post(self):
     return {
-      'given_body': self.body,
-      'given_url': self.url
+      'given_body': self.body.get('number.list', 'test_dict.test.float'),
+      'given_url': self.url.get('fileid')
     }
 
 
@@ -27,11 +27,17 @@ class DefaultHandlerV2(venom.RequestHandler):
 appv1.POST('/serve/:fileid', DefaultHandlerV1).url({
   'fileid': venom.Parameters.Int(min=1)
 }).body({
-  'numbers': venom.Parameters.List(venom.Parameters.Int()),
+  'number': {
+    'list': venom.Parameters.List(venom.Parameters.Int())
+  },
   'test_dict': venom.Parameters.List({
-    'test': venom.Parameters.String()
+    'test': venom.Parameters.List({
+      'float': venom.Parameters.Float()
+    })
   }, min=2)
 })
+
+
 appv2.GET('/serve/', DefaultHandlerV2)
 
 

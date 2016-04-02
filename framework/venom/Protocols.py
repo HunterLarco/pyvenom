@@ -1,6 +1,10 @@
 __all__ = ['Protocol']
 
 
+# system imports
+import traceback
+
+
 class ProtocolReadFailed(Exception):
   pass
 
@@ -45,7 +49,7 @@ class Protocol(object):
   def __enter__(self):
     return self
   
-  def __exit__(self, exception_type, exception_value, traceback):
+  def __exit__(self, exception_type, exception_value, exception_traceback):
     """
     ' This function catches all exceptions raised while using
     ' the protocol. Because of this, the first error is caught and
@@ -56,6 +60,7 @@ class Protocol(object):
     if not exception_type: return
     self.error(500)
     if not self._success: return False
+    traceback.print_exc()
     self._success = False
     self._pre_write({
       'type': exception_type.__name__,

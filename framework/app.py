@@ -25,7 +25,12 @@ class DefaultHandlerV2(venom.RequestHandler):
 
 
 
-appv1.POST('/serve/:fileid', DefaultHandlerV1)
+appv1.POST('/serve/:fileid', DefaultHandlerV1).url({
+  'fileid': venom.Parameters.Int(min=1)
+}).body({
+  'numbers': venom.Parameters.List(venom.Parameters.Int()),
+  'test_dict': venom.Parameters.List(venom.Parameters.Float(), min=2)
+})
 appv2.GET('/serve/', DefaultHandlerV2)
 
 

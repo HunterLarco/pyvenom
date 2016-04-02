@@ -16,7 +16,11 @@ def generate_meta_handler(app):
       meta = { 'meta': True }
       for route in app.routes:
         if route.matches_path(path):
-          meta[route.method] = route.path
+          meta[route.method] = {
+            'url': route._url.to_meta_dict(),
+            'query': route._query.to_meta_dict(),
+            'body': route._body.to_meta_dict()
+          }
       return meta
   return MetaRouteHandler
 

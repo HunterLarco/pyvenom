@@ -5,7 +5,7 @@ __all__ = ['Route', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 
 import json
 
 # application imports
-# import Parameters
+import Parameters
 
 
 class Route(object):
@@ -14,9 +14,9 @@ class Route(object):
   def __init__(self, path, handler, protocol):
     self.method = self.DEFAULT_METHOD
     self.path = path
-    # self._url = Parameters.Dict({})
-    # self._body = Parameters.Dict({})
-    # self._query = Parameters.Dict({})
+    self._url = Parameters.Dict({})
+    self._body = Parameters.Dict({})
+    self._query = Parameters.Dict({})
     self.handler = handler
     self.protocol = protocol
   
@@ -55,7 +55,14 @@ class Route(object):
   
   def execute(self, request, response, error):
     with self.protocol(request, response, error) as proto:
-      body = proto._read(request.body)
+      body_params = proto._read(request.body)
+      query_params = request.GET
+      url_params = self.get_url_variables(request.path)
+      
+      body_params = self._body.load(body_params)
+      query_params = self._query.load(url_params)
+      query_params = self._url.load(url_params)
+      
       handler = self.handler(self, request, response, error)
       returned = handler.dispatch()
       proto._catch_write(returned)

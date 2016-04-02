@@ -39,6 +39,13 @@ class ScriptsHandler(webapp2.RequestHandler):
     self.response.out.write(template.render(path, template_values))
 
 
+class ScaffoldHandler(webapp2.RequestHandler):
+  def get(self):
+    template_values = {}
+    path = os.path.join(os.path.dirname(__file__), 'templates/scaffold.html')
+    self.response.out.write(template.render(path, template_values))
+
+
 class MainHandler(webapp2.RequestHandler):
   def get(self):
     if not self.request.path.endswith('/'):
@@ -89,7 +96,8 @@ class ScriptExecutionHandler(webapp2.RequestHandler):
 
 ui = webapp2.WSGIApplication([
   ('.*/(resources|images)/(.*)', ResourceHandler),
-  ('.*/scripts/?', ScriptsHandler),
+  ('.*/scripts', ScriptsHandler),
+  ('.*/scaffold', ScaffoldHandler),
   ('.*/scripts/execute/([^/]+)/?', ScriptExecutionHandler),
   ('.*', MainHandler)
 ], debug=True)
@@ -103,15 +111,10 @@ ui = webapp2.WSGIApplication([
 
 scripts = {}
 
-def script(param):
-  if hasattr(param, '__call__'):
-    scripts[param.__name__] = (param, 'No Documentation')
-    return param
-  
-  def decorator(funct):
-    scripts[funct.__name__] = (funct, param)
-    return funct
-  return decorator
+def script(funct):
+  doc = funct.__doc__ if funct.__doc__ else 'No Documentation'
+  scripts[funct.__name__] = (funct, doc)
+  return funct
 
 
 import importutil

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Venom Scaffold</title>
+
+<meta charset='utf-8'/>
+
+<meta name='apple-mobile-web-app-capable' content='yes'>
+<meta name='mobile-web-app-capable' content='yes'>
+
+<meta content='minimum-scale=1.0, width=device-width, maximum-scale=1, user-scalable=no' name='viewport'/>
+
+<link rel='stylesheet' href='resources/css/main.css'/>
+
+</head>
+<body class='Pane-Frame'>
+
+
+{% with 'scaffold' as page %}
+{% include 'partials/sidebar.html' %}
+{% endwith %}
+
+
+<div class='Pane'>
+  <div class='Pane-Header'>Templates</div>
+  <div class='Pane-Content Nav'>
+    <div class='Nav-Label'>Packages</div>
+    <div class='Nav-Item'>Users</div>
+    <div class='Nav-Item'>Postable Content</div>
+    
+    <div class='Nav-Label'>Models</div>
+    <div class='Nav-Item'>User Model</div>
+    <div class='Nav-Item'>Postable Content</div>
+    <div class='Nav-Item'>Uploaded File</div>
+    <div class='Nav-Item'>Custom Model</div>
+    
+    <div class='Nav-Label'>Endpoints</div>
+    <div class='Nav-Item'>User Auth</div>
+    <div class='Nav-Item'>Custom Endpoint</div>
+  </div>
+</div>
+
+
+<div class='Pane'>
+  <div class='Pane-Header'>Build Tool</div>
+</div>
+
+
+</body>
+</html>

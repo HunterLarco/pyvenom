@@ -1,158 +1,80 @@
-import json
-from xml.dom import minidom
-from xml.etree import ElementTree
-from xml.etree.ElementTree import Element, tostring
+__all__ = ['Protocol']
+
+
+# system imports
+import traceback
+
+
+class ProtocolReadFailed(Exception):
+  pass
+
+class ProtocolWriteFailed(Exception):
+  pass
 
 
 class Protocol(object):
-  def __init__(self, headers=None):
-    self.headers = headers if headers else {}
+  def __init__(self, request, response, error):
+    self.request = request
+    self.response = response
+    self.error = error
+    self._success = True
   
-  def read(self, string):
-    pass
+  def _read(self, value):
+    try:
+      return self.read(value)
+    except Exception:
+      raise ProtocolReadFailed('Protocol read failed')
   
-  def write(self, webapp2_response, error):
-    webapp2_response.headers = self.headers
-    webapp2_response.clear()
-
-
-class TextProtocol(Protocol):
-  def __init__(self, data, headers=None):
-    super(TextProtocol, self).__init__(headers)
-    if not 'Content-Type' in self.headers:
-      self.headers['Content-Type'] = 'text/plain'
-    self.data = data
+  def read(self, value):
+    raise NotImplementedError('Protocol read method not implemented')
   
-  def read(self, string):
-    super(TextProtocol, self).read(string)
-    return string
+  def _catch_write(self, value):
+    try:
+      return self._pre_write(value)
+    except Exception:
+      raise ProtocolWriteFailed('Protocol write failed')
   
-  def write(self, webapp2_response, error):
-    super(TextProtocol, self).write(webapp2_response, error)
-    webapp2_response.write(str(self.data))
+  def pre(self, value):
+    if not value: return {}
+    return value
+  
+  def _pre_write(self, value):
+    value = self.pre(value)
+    value['success'] = self._success
+    self.write(value)
+  
+  def write(self, value):
+    raise NotImplementedError('Protocol write method not implemented')
+  
+  def __enter__(self):
+    return self
+  
+  def __exit__(self, exception_type, exception_value, exception_traceback):
+    """
+    ' This function catches all exceptions raised while using
+    ' the protocol. Because of this, the first error is caught and
+    ' we try to response with the formatted error using the protocol.
+    ' However in the case that formatting the error fails, an internal
+    ' server error is thrown and nothing is written to the response body.
+    """
+    if not exception_type: return
+    self.error(500)
+    if not self._success: return False
+    traceback.print_exc()
+    self._success = False
+    self._pre_write({
+      'type': exception_type.__name__,
+      'message': exception_value.message
+    })
+    return True# suppresses exception
 
 
 class JSONProtocol(Protocol):
-  def __init__(self, data, headers=None):
-    super(JSONProtocol, self).__init__(headers)
-    if not 'Content-Type' in self.headers:
-      self.headers['Content-Type'] = 'application/json'
-    self.data = data
+  def read(self, value):
+    if not value: value = '{}'
+    from json import loads
+    return loads(value)
   
-  def read(self, string):
-    super(JSONProtocol, self).read(string)
-    return json.loads(string)
-  
-  def write(self, webapp2_response, error):
-    super(JSONProtocol, self).write(webapp2_response, error)
-    webapp2_response.write(json.dumps(self.data, indent=2))
-
-
-class XmlListConfig(list):
-    def __init__(self, aList):
-        for element in aList:
-            if element:
-                # treat like dict
-                if len(element) == 1 or element[0].tag != element[1].tag:
-                    self.append(XmlDictConfig(element))
-                # treat like list
-                elif element[0].tag == element[1].tag:
-                    self.append(XmlListConfig(element))
-            elif element.text:
-                text = element.text.strip()
-                if text:
-                    self.append(text)
-
-
-class XmlDictConfig(dict):
-    '''
-    Example usage:
-
-    >>> tree = ElementTree.parse('your_file.xml')
-    >>> root = tree.getroot()
-    >>> xmldict = XmlDictConfig(root)
-
-    Or, if you want to use an XML string:
-
-    >>> root = ElementTree.XML(xml_string)
-    >>> xmldict = XmlDictConfig(root)
-
-    And then use xmldict for what it is... a dict.
-    '''
-    def __init__(self, parent_element):
-        if parent_element.items():
-            self.update(dict(parent_element.items()))
-        for element in parent_element:
-            if element:
-                # treat like dict - we assume that if the first two tags
-                # in a series are different, then they are all different.
-                if len(element) == 1 or element[0].tag != element[1].tag:
-                    aDict = XmlDictConfig(element)
-                # treat like list - we assume that if the first two tags
-                # in a series are the same, then the rest are the same.
-                else:
-                    # here, we put the list in dictionary; the key is the
-                    # tag name the list elements all share in common, and
-                    # the value is the list itself 
-                    aDict = {element[0].tag: XmlListConfig(element)}
-                # if the tag has attributes, add those to the dict
-                if element.items():
-                    aDict.update(dict(element.items()))
-                self.update({element.tag: aDict})
-            # this assumes that if you've got an attribute in a tag,
-            # you won't be having any text. This may or may not be a 
-            # good idea -- time will tell. It works for the way we are
-            # currently doing XML configuration files...
-            elif element.items():
-                self.update({element.tag: dict(element.items())})
-            # finally, if there are no child tags and no attributes, extract
-            # the text
-            else:
-                self.update({element.tag: element.text})
-
-
-class XMLProtocol(Protocol):
-  def __init__(self, data, headers=None):
-    super(XMLProtocol, self).__init__(headers)
-    if not 'Content-Type' in self.headers:
-      self.headers['Content-Type'] = 'application/xml'
-    self.data = data
-  
-  def xml_to_dict(self, xmlstring):
-    root = ElementTree.XML(xmlstring)
-    xmldict = XmlDictConfig(root)
-    return xmldict
-  
-  def dict_to_xml(self, d, root=None):
-    root = root if root is not None else []
-    for key, value in d.items():
-      child = Element(key)
-      if isinstance(value, dict):
-        self.dict_to_xml(value, root=child)
-      elif isinstance(value, list):
-        for item in value:
-          self.dict_to_xml(item, root=child)
-      else:
-        child.text = str(value)
-      root.append(child)
-    return root
-  
-  def xml_to_string(self, xml):
-    if isinstance(xml, list):
-      xml = map(lambda x: self.xml_to_string(x), xml)
-      return '\n'.join(xml)
-    rough_string = tostring(xml)
-    reparsed = minidom.parseString(rough_string)
-    return reparsed.toprettyxml(indent='  ')
-  
-  def read(self, string):
-    super(XMLProtocol, self).read(string)
-    return self.xml_to_dict(string)
-  
-  def write(self, webapp2_response, error):
-    super(XMLProtocol, self).write(webapp2_response, error)
-    xml = self.dict_to_xml(self.data)
-    xml_str = self.xml_to_string(xml)
-    webapp2_response.write(xml_str)
-
-    
+  def write(self, value):
+    from json import dumps
+    self.response.write(dumps(value, indent=2, sort_keys=True))

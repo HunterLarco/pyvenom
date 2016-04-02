@@ -1,10 +1,14 @@
-__all__ = ['Parameter', 'String', 'Int', 'Float', 'List']
+# classes
+__all__ = ['Parameter', 'Int', 'Float', 'String', 'List', 'Dict']
+
+# exceptions
+__all__ += ['ParameterEnforcementFailed', 'ParameterCastingFailed', 'ParameterRequiredException']
 
 
-class ParameterSanitizationException(Exception):
+class ParameterEnforcementFailed(Exception):
   pass
 
-class ParameterCastingException(Exception):
+class ParameterCastingFailed(Exception):
   pass
 
 class ParameterRequiredException(Exception):
@@ -23,43 +27,102 @@ def removenull(obj):
 class Parameter(object):
   def __init__(self, required=True):
     self.required = required
+    self._options = { 'required': required }
   
-  def dispatch(self, value):
+  def load(self, value):
     if value == None:
       if self.required:
-        raise ParameterRequiredException('Parameter required but not found')
+        raise ParameterRequiredException('Parameter required and cannot be None')
       return value
     
     try:
       value = self.cast(value)
     except Exception:
-      raise ParameterCastingException('Parameter casting failed')
+      raise ParameterCastingFailed('Parameter casting failed')
     
     try:
-      value = self.sanitize(value)
-    except ParameterCastingException as err:
+      self.enforce(value)
+    except ParameterEnforcementFailed as err:
       raise err
-    except ParameterSanitizationException as err:
+    except ParameterCastingFailed as err:
       raise err
     except ParameterRequiredException as err:
       raise err
-    except Exception:
-      raise ParameterSanitizationException('Unknown exception during sanitization')
+    except Exception as err:
+      raise ParameterEnforcementFailed('Unknown exception during parameter enforcing')
     
     return value
   
-  def cast(self, value):
-    raise NotImplemented()
+  def enforce(self, value):
+    raise NotImplementedError()
   
-  def sanitize(self, value):
-    raise NotImplemented()
+  def cast(self, value):
+    raise NotImplementedError()
+  
+  def to_meta_dict(self):
+    raise NotImplementedError()
   
   def __repr__(self):
-    options = 'required=' + str(self.required)
-    return 'Parameter({})'.format(options)
+    options = ['{}={}'.format(key, value) for key, value in self._options.items() if value is not None]
+    options = ', '.join(options)
+    return '{}({})'.format(self.__class__.__name__, options)
+
+
+class Int(Parameter):
+  def __init__(self, min=None, max=None, choices=None, required=True):
+    super(Int, self).__init__(required=required)
+    self.min = min
+    self.max = max
+    self.choices = choices
+    self._options['min'] = min
+    self._options['max'] = max
+    self._options['choices'] = choices
   
-  def metadict(self):
-    raise NotImplemented()
+  def cast(self, value):
+    return int(value)
+  
+  def enforce(self, value):
+    self.enforce_min(value)
+    self.enforce_max(value)
+    self.enforce_choices(value)
+  
+  def enforce_min(self, value):
+    if self.min is None: return
+    if value < self.min:
+      raise ParameterEnforcementFailed('Int less than minimum')
+  
+  def enforce_max(self, value):
+    if self.max is None: return
+    if value > self.max:
+      raise ParameterEnforcementFailed('Int greater than minimum')
+  
+  def enforce_choices(self, value):
+    if self.choices is None: return
+    if value not in self.choices:
+      raise ParameterEnforcementFailed('Int not in enforced choices')
+  
+  def to_meta_dict(self):
+    return removenull({
+      'type': 'int',
+      'required': self.required,
+      'min': self.min,
+      'max': self.max,
+      'choices': self.choices
+    })
+
+
+class Float(Int):
+  def cast(self, value):
+    return float(value)
+  
+  def to_meta_dict(self):
+    return removenull({
+      'type': 'float',
+      'required': self.required,
+      'min': self.min,
+      'max': self.max,
+      'choices': self.choices
+    })
 
 
 class String(Parameter):
@@ -69,49 +132,43 @@ class String(Parameter):
     self.max = max
     self.choices = choices
     self.characters = characters
+    self._options['min'] = min
+    self._options['max'] = max
+    self._options['choices'] = choices
+    self._options['characters'] = characters
   
   def cast(self, value):
     return value
   
-  def sanitize(self, value):
-    self.enforceMinimum(value)
-    self.enforceMaximum(value)
-    self.enforceChoices(value)
-    self.enforceCharacters(value)
-    return value
+  def enforce(self, value):
+    self.enforce_minimum(value)
+    self.enforce_maximum(value)
+    self.enforce_choices(value)
+    self.enforce_characters(value)
   
-  def enforceMinimum(self, value):
+  def enforce_minimum(self, value):
     if self.min == None: return
     if len(value) < self.min:
-      raise ParameterSanitizationException('String length was less than minimum')
+      raise ParameterEnforcementFailed('String length was less than minimum')
   
-  def enforceMaximum(self, value):
+  def enforce_maximum(self, value):
     if self.max == None: return
     if len(value) > self.max:
-      raise ParameterSanitizationException('String length exceeded maximum')
+      raise ParameterEnforcementFailed('String length exceeded maximum')
   
-  def enforceChoices(self, value):
+  def enforce_choices(self, value):
     if self.choices == None: return
     if not value in self.choices:
-      raise ParameterSanitizationException('String not found in permitted choices')
+      raise ParameterEnforcementFailed('String not found in permitted choices')
   
-  def enforceCharacters(self, value):
+  def enforce_characters(self, value):
     if self.characters == None: return
     valueset = set(value)
     charset = set(self.characters)
     if len(valueset - charset) > 0:
-      raise ParameterSanitizationException('String contains illegal characters')
+      raise ParameterEnforcementFailed('String contains illegal characters')
   
-  def __repr__(self):
-    options = ''
-    if self.min != None: options += 'min=' + str(self.min) + ', '
-    if self.max != None: options += 'max=' + str(self.max) + ', '
-    if self.choices != None: options += 'choices=' + str(self.choices) + ', '
-    if self.characters != None: options += 'characters=' + str(self.characters) + ', '
-    options += 'required=' + str(self.required) + ', '
-    return 'StringParameter({})'.format(options[:-2])
-  
-  def metadict(self):
+  def to_meta_dict(self):
     return removenull({
       'type': 'string',
       'min': self.min,
@@ -122,106 +179,37 @@ class String(Parameter):
     })
 
 
-class Int(Parameter):
-  def __init__(self, min=None, max=None, choices=None, required=True):
-    super(Int, self).__init__(required=required)
-    self.min = min
-    self.max = max
-    self.choices = choices
-  
-  def cast(self, value):
-    return int(value)
-  
-  def sanitize(self, value):
-    self.enforceMinimum(value)
-    self.enforceMaximum(value)
-    self.enforceChoices(value)
-    return value
-  
-  def enforceMinimum(self, value):
-    if self.min == None: return
-    if value < self.min:
-      raise ParameterSanitizationException('Int was less than minimum')
-  
-  def enforceMaximum(self, value):
-    if self.max == None: return
-    if value > self.max:
-      raise ParameterSanitizationException('Int exceeded maximum')
-  
-  def enforceChoices(self, value):
-    if self.choices == None: return
-    if not value in self.choices:
-      raise ParameterSanitizationException('Int not found in permitted choices')
-  
-  def __repr__(self):
-    options = ''
-    if self.min != None: options += 'min=' + str(self.min) + ', '
-    if self.max != None: options += 'max=' + str(self.max) + ', '
-    if self.choices != None: options += 'choices=' + str(self.choices) + ', '
-    options += 'required=' + str(self.required) + ', '
-    return 'IntParameter({})'.format(options[:-2])
-  
-  def metadict(self):
-    return removenull({
-      'type': 'int',
-      'min': self.min,
-      'max': self.max,
-      'choices': self.choices,
-      'required': self.required
-    })
-
-
-class Float(Int):
-  def cast(self, value):
-    return float(value)
-  
-  def __repr__(self):
-    options = ''
-    if self.min != None: options += 'min=' + str(self.min) + ', '
-    if self.max != None: options += 'max=' + str(self.max) + ', '
-    if self.choices != None: options += 'choices=' + str(self.choices) + ', '
-    options += 'required=' + str(self.required) + ', '
-    return 'FloatParameter({})'.format(options[:-2])
-  
-  def metadict(self):
-    return removenull({
-      'type': 'float',
-      'min': self.min,
-      'max': self.max,
-      'choices': self.choices,
-      'required': self.required
-    })
-
-
 class Dict(Parameter):
   def __init__(self, template, required=True):
     super(Dict, self).__init__(required=required)
+    self._sanitize_template(template)
     self.template = template
+    self._options['template'] = template
+  
+  def _sanitize_template(self, template):
+    for key, param in template.items():
+      if not isinstance(param, Parameter):
+        if isinstance(param, dict):
+          template[key] = Dict(param)
+        else:
+          raise Exception('Unknown Dict parameter template value')
   
   def cast(self, value):
-    return dict(value)
+    return value
   
-  def sanitize(self, passedDict):
-    for key, value in self.template.items():
-      if isinstance(value, Parameter):
-        if not key in passedDict:
-          if value.required:
-            raise ParameterSanitizationException('Dict missing expected parameter {}'.format(key))
-        else:
-          passedDict[key] = value.dispatch(passedDict[key])
-      elif isinstance(value, dict):
-        self.__class__(value).dispatch(passedDict[key])
-    return passedDict
+  def enforce(self, dict_value):
+    for key, param in self.template.items():
+      if key in dict_value:
+        dict_value[key] = param.load(dict_value[key])
+      elif param.required:
+        raise ParameterRequiredException('Required key in Dict template not found')
   
-  def __repr__(self):
-    return 'DictParameter({})'.format(str(self.template))
-  
-  def metadict(self):
+  def to_meta_dict(self):
     return removenull({
       'type': 'dict',
       'required': self.required,
-      'children': dict(
-        [(key, value.metadict()) for key, value in self.template.items()]
+      'keys': dict(
+        [(key, value.to_meta_dict()) for key, value in self.template.items()]
       )
     })
 
@@ -231,30 +219,36 @@ class List(Parameter):
     super(List, self).__init__(required=required)
     self.min = min
     self.max = max
-    self.template = template
+    self.template = self._sanitize_template(template)
+    self._options['min'] = min
+    self._options['max'] = max
+    self._options['template'] = template
+  
+  def _sanitize_template(self, template):
+    if not isinstance(template, Parameter):
+      if isinstance(template, dict):
+        return Dict(template)
+      else:
+        raise Exception('Unknown Dict parameter template value')
+    return template
   
   def cast(self, value):
     return list(value)
   
-  def sanitize(self, arr):
+  def enforce(self, arr):
     if self.min is not None and len(arr) < self.min:
-      raise ParameterSanitizationException('List length was less than minimum')
+      raise ParameterEnforcementFailed('List length was less than minimum')
     if self.max is not None and len(arr) > self.max:
-      raise ParameterSanitizationException('List length exceeded maximum')
+      raise ParameterEnforcementFailed('List length exceeded maximum')
     
-    dictparam = Dict(self.template)
-    for item in arr:
-      dictparam.dispatch(item)
-    return arr
+    for i, item in enumerate(arr):
+      arr[i] = self.template.load(item)
   
-  def __repr__(self):
-    return 'ListParameter({})'.format(str(self.template))
-  
-  def metadict(self):
+  def to_meta_dict(self):
     return removenull({
       'type': 'list',
       'min': self.min,
       'max': self.min,
       'required': self.required,
-      'template': Dict(self.template).metadict()
+      'template': self.template.to_meta_dict()
     })

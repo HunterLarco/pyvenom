@@ -4,10 +4,10 @@ import routes
 import Protocols
 
 
-__all__ = ['Server']
+__all__ = ['Application']
 
 
-class Server(object):
+class Application(object):
   def __init__(self, version=1, routes=None, debug=False):
     self.version = version
     self.api_prefix = '/api/v{}/'.format(version)

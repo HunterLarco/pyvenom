@@ -1,0 +1,18 @@
+Metadata-Version: 1.1
+Name: pyvenom
+Version: 0.0.0
+Summary: PyVenom, an App Engine framework
+Home-page: https://github.com/HunterLarco/pyvenom
+Author: Hunter John Larco
+Author-email: hunter@larcolabs.com
+License: MIT
+Description: UNKNOWN
+Keywords: pyvenom venom appengine google cloud gae
+Platform: UNKNOWN
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7

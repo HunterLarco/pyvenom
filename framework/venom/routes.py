@@ -61,9 +61,9 @@ class Route(object):
       
       body_params = self._body.load(body_params)
       query_params = self._query.load(url_params)
-      query_params = self._url.load(url_params)
+      url_params = self._url.load(url_params)
       
-      handler = self.handler(self, request, response, error)
+      handler = self.handler(self, request, url_params, query_params, body_params)
       returned = handler.dispatch()
       proto._catch_write(returned)
     # return self.handler(self, request, response, error).dispatch()

@@ -168,7 +168,7 @@ class String(Parameter):
     if len(valueset - charset) > 0:
       raise ParameterEnforcementFailed('String contains illegal characters')
   
-  def metadict(self):
+  def to_meta_dict(self):
     return removenull({
       'type': 'string',
       'min': self.min,
@@ -244,11 +244,11 @@ class List(Parameter):
     for i, item in enumerate(arr):
       arr[i] = self.template.load(item)
   
-  def metadict(self):
+  def to_meta_dict(self):
     return removenull({
       'type': 'list',
       'min': self.min,
       'max': self.min,
       'required': self.required,
-      'template': Dict(self.template).metadict()
+      'template': self.template.to_meta_dict()
     })

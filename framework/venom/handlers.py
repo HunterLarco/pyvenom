@@ -6,10 +6,13 @@ class HTTPMethodNotImplemented(Exception):
 
 
 class RequestHandler(object):
-  def __init__(self, route, request, response, error):
+  def __init__(self, route, request, url_params, query_params, body_params):
     self.path = request.path
     self.route = route
     self.method = request.method.lower()
+    self.url = url_params
+    self.query = query_params
+    self.body = body_params
 
   def dispatch(self):
     method = self.method.lower()

@@ -77,4 +77,4 @@ class JSONProtocol(Protocol):
   
   def write(self, value):
     from json import dumps
-    self.response.write(dumps(value, indent=2))
+    self.response.write(dumps(value, indent=2, sort_keys=True))

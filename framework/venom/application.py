@@ -8,11 +8,17 @@ import Protocols
 from handlers import RequestHandler
 
 
-class MetaRouteHandler(RequestHandler):
-  def dispatch(self):
-    return {
-      'meta': True
-    }
+def generate_meta_handler(app):
+  class MetaRouteHandler(RequestHandler):
+    def dispatch(self):
+      prefix = '/meta/v{}/'.format(app.version)
+      path = '/api/v{}/{}'.format(app.version, self.path[len(prefix):])
+      meta = { 'meta': True }
+      for route in app.routes:
+        if route.matches_path(path):
+          meta[route.method] = route.path
+      return meta
+  return MetaRouteHandler
 
 
 class Application(WSGIEntryPoint):
@@ -33,14 +39,14 @@ class Application(WSGIEntryPoint):
   
   def _on_entry(self, request, response, error):
     for route in self.routes:
-      if route.matches(request):
+      if route.matches(request.path, request.method):
         route.execute(request, response, error)
         return
     error(404)
   
   def _add_meta_route(self, path, handler, protocol):
     path = '/meta/v{}/{}'.format(self.version, path)
-    route = routes.Route(path, MetaRouteHandler, Protocols.JSONProtocol)
+    route = routes.Route(path, generate_meta_handler(self), Protocols.JSONProtocol)
     self.routes.append(route)
     return route
   

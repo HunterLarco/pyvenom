@@ -25,15 +25,16 @@ class Route(object):
     if path.startswith('/'): path = path[1:]
     return path
   
-  def matches(self, request):
-    return self.get_url_variables(request) is not None
+  def matches(self, path, method):
+    return self.matches_path(path) and self.matches_method(method)
   
-  def get_url_variables(self, request):
-    path = request.path
-    method = request.method
-    
-    if self.method and self.method.lower() != method.lower(): return None
-    
+  def matches_method(self, method):
+    return not self.method or self.method.lower() == method.lower()
+  
+  def matches_path(self, path):
+    return self.get_url_variables(path) is not None
+  
+  def get_url_variables(self, path):
     variables = {}
     
     live_path = self.sanitize_path(path)

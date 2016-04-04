@@ -19,7 +19,7 @@ class SearchQuery(object):
     self.value = value
   
   def query_string(self):
-    return '{}{}"{}"'.format(self.tagname, self.operator, self.value)
+    return '{}{}{}'.format(self.tagname, self.operator, self.value)
   
   def __repr__(self):
     return 'SearchQuery({})'.format(self.query_string())
@@ -112,9 +112,6 @@ class NumberField(SearchField):
   def __eq__(self, value):
     return SearchQuery(self.name, '=', value)
   
-  def __ne__(self, value):
-    return SearchQuery(self.name, '!=', value)
-  
   def __lt__(self, value):
     return SearchQuery(self.name, '<', value)
   
@@ -138,9 +135,6 @@ class DateField(SearchField):
   def __eq__(self, value):
     return SearchQuery(self.name, '=', value)
   
-  def __ne__(self, value):
-    return SearchQuery(self.name, '!=', value)
-  
   def __lt__(self, value):
     return SearchQuery(self.name, '<', value)
   
@@ -163,17 +157,22 @@ class GeopointField(SearchField):
   def deconvert(self, geopt):
     return (geopt.latitude, geopt.longitude)
   
+  def __call__(self, lat, lon):
+    return GeopointDistance(self, lat, lon)
+
+
+class GeopointDistance(object):
+  def __init__(self, geofield, lat, lon):
+    self.geofield = geofield
+    self.lat = lat
+    self.lon = lon
+    self.name = 'distance({}, geopoint({}, {}))'.format(self.geofield.name, self.lat, self.lon)
+  
   def __lt__(self, value):
     return SearchQuery(self.name, '<', value)
   
-  def __le__(self, value):
-    return SearchQuery(self.name, '<=', value)
-  
   def __gt__(self, value):
     return SearchQuery(self.name, '>', value)
-  
-  def __ge__(self, value):
-    return SearchQuery(self.name, '>=', value)
 
 
 class MetaSearchModel(type):

@@ -49,7 +49,7 @@ class DefaultHandlerV2(venom.RequestHandler):
 
 
 
-appv1.GET('/serve/:fileid', FileHandlerV1).url({
+route1 = appv1.GET('/serve/:fileid', FileHandlerV1).url({
   'fileid': venom.Parameters.Model(File, key='fileid', type=venom.Parameters.String())
 })
 

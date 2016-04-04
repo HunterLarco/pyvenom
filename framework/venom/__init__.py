@@ -1,9 +1,10 @@
-__all__ = ['wsgi_entry', 'Protocols', 'Parameters']
+__all__ = ['wsgi_entry', 'Protocols', 'Parameters', 'internal']
 
 
 import wsgi_entry
 import Protocols
 import Parameters
+import internal
 
 
 from dispatch import *

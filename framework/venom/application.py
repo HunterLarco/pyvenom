@@ -1,6 +1,9 @@
 __all__ = ['Application']
 
 
+# system imports
+from collections import defaultdict
+
 # application imports
 from wsgi_entry import WSGIEntryPoint
 import routes
@@ -25,8 +28,27 @@ def generate_meta_handler(app):
   return MetaRouteHandler
 
 
+def generate_routes_handler(app):
+  class GetRoutesHandler(RequestHandler):
+    def dispatch(self):
+      routes = defaultdict(set)
+      for route in app.routes:
+        if not route.path.startswith('/api/'): continue
+        if not route.method:
+          routes[route.path] = routes[route.path].union(app.allowable_methods)
+        else:
+          routes[route.path].add(route.method)
+      for route, methods in routes.items():
+        routes[route] = list(methods)
+      return {
+        'routes': routes
+      }
+  return GetRoutesHandler
+
+
 class Application(WSGIEntryPoint):
-  allowable_prefixes = frozenset(('api', 'meta', 'docs'))
+  allowable_methods = frozenset(('GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'DELETE', 'OPTIONS', 'TRACE'))
+  allowable_prefixes = frozenset(('api', 'meta', 'docs', 'routes'))
   
   def __init__(self, routes=None, version=1, debug=False, protocol=None):
     super(Application, self).__init__()
@@ -34,10 +56,12 @@ class Application(WSGIEntryPoint):
     self.version = version
     self.debug = debug
     self.protocol = protocol
+    self._add_routes_route()
   
   def matches_prefix(self, path):
     for prefix in self.allowable_prefixes:
-      if path.startswith('/{}/v{}/'.format(prefix, self.version)):
+      prefixed_path = '/{}/v{}'.format(prefix, self.version)
+      if path.startswith('{}/'.format(prefixed_path)) or path == prefixed_path:
         return True
     return False
   
@@ -47,6 +71,12 @@ class Application(WSGIEntryPoint):
         route.execute(request, response, error)
         return
     error(404)
+  
+  def _add_routes_route(self):
+    path = '/routes/v{}'.format(self.version)
+    route = routes.Route(path, generate_routes_handler(self), Protocols.JSONProtocol)
+    self.routes.append(route)
+    return route
   
   def _add_meta_route(self, path, handler, protocol):
     path = '/meta/v{}/{}'.format(self.version, path)

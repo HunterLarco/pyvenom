@@ -37,6 +37,8 @@ class Parameter(object):
     
     try:
       value = self.cast(value)
+    except ParameterCastingFailed as err:
+      raise err
     except Exception:
       raise ParameterCastingFailed('Parameter casting failed')
     
@@ -138,7 +140,7 @@ class String(Parameter):
     self._options['characters'] = characters
   
   def cast(self, value):
-    return value
+    return str(value)
   
   def enforce(self, value):
     self.enforce_minimum(value)
@@ -195,7 +197,7 @@ class Dict(Parameter):
           raise Exception('Unknown Dict parameter template value')
   
   def cast(self, value):
-    return value
+    return dict(value)
   
   def enforce(self, dict_value):
     for key, param in self.template.items():
@@ -248,7 +250,45 @@ class List(Parameter):
     return removenull({
       'type': 'list',
       'min': self.min,
-      'max': self.min,
+      'max': self.max,
       'required': self.required,
       'template': self.template.to_meta_dict()
     })
+
+
+class Model(Parameter):
+  def __init__(self, modelcls, key=None, type=None, required=True):
+    super(Model, self).__init__(required=required)
+    self.model = modelcls
+    self.key = key
+    self.key_type = type
+    self._options['model'] = modelcls
+    self._options['key'] = key
+    self._options['type'] = type
+  
+  def cast(self, value):
+    if not self.key:
+      entity = self.model.get_by_id(int(value))
+    else:
+      if self.key_type:
+        value = self.key_type.load(value)
+      if not hasattr(self.model, self.key):
+        raise ParameterCastingFailed('Key not found on model')
+      entity = self.model.query(getattr(self.model, self.key) == value).get()
+    if not entity:
+      raise ParameterCastingFailed('Entity not found')
+    return entity
+  
+  def enforce(self, entity):
+    pass
+  
+  def to_meta_dict(self):
+    return removenull({
+      'type': 'model',
+      'model': self.model.__name__,
+      'key': {
+        'name': self.key,
+        'type': self.key_type.to_meta_dict()
+      }
+    })
+    

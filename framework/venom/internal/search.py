@@ -157,7 +157,7 @@ class GeopointField(SearchField):
   def deconvert(self, geopt):
     return (geopt.latitude, geopt.longitude)
   
-  def __call__(self, lat, lon):
+  def distance_to(self, lat, lon):
     return GeopointDistance(self, lat, lon)
 
 

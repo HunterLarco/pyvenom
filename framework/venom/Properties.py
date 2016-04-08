@@ -10,6 +10,7 @@ class PropertyQuery(object):
   LE = '<='
   GT = '>'
   GE = '>='
+  IN = 'in'
   
   def __init__(self, prop, operator, value):
     self.prop = prop
@@ -103,6 +104,9 @@ class Property(object):
   def __ge__(self, value):
     raise QueryNotSupported('Property does not support >= queries')
   
+  def __contains__(self, value):
+    raise QueryNotSupported('Property does not support IN queries')
+  
   def __repr__(self):
     classname = self.__class__.__name__
     if self._model_instance != None:
@@ -141,7 +145,15 @@ class String(Property):
   
   def __eq__(self, value):
     self.is_queried = True
+    self.search = True
+    self.ndb = False
     return PropertyQuery(self, PropertyQuery.EQ, value)
+  
+  def __contains__(self, value):
+    self.is_queried = True
+    self.search = True
+    self.ndb = False
+    return PropertyQuery(self, PropertyQuery.IN, value)
     
     
     

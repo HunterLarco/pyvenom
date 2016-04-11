@@ -1,4 +1,5 @@
-__all__ = ['search']
+__all__ = ['search', 'hybrid']
 
 
 import search
+import hybrid

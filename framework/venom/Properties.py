@@ -34,13 +34,13 @@ class Property(object):
     self.default = default
     self.choices = choices
     
-    # used just for repr
-    self._code_name = self
+    self._name = None
     
     self.is_queried = False
     self.search = False
     
-    self.__set__(self, default)
+  def _fix_up(self, name, instance):
+    self._name = name
   
   def to_ndb_property(self):
     raise NotImplementedError()
@@ -63,11 +63,13 @@ class Property(object):
     if instance == None:
       # called on a class
       return self
-    return self._value
+    if not self._name in instance._values:
+      return self.default
+    return instance._values[self._name]
 
   def __set__(self, instance, value):
     self.enforce(value)
-    self._value = value
+    instance._values[self._name] = value
 
   def __delete__(self,instance):
     raise AttributeError('Can\'t delete attribute')
@@ -158,7 +160,7 @@ class String(Property):
     if value == None: return value
     
     # type str
-    if not isinstance(value, str):
+    if not isinstance(value, str) and not isinstance(value, unicode):
       raise PropertyEnforcementFailed('StringProperty must be of type str')
 
     # min
@@ -201,8 +203,8 @@ class Integer(Property):
     if value == None: return value
     
     # type str
-    if not isinstance(value, int):
-      raise PropertyEnforcementFailed('Integer must be of type int')
+    if not isinstance(value, int) and not isinstance(value, long):
+      raise PropertyEnforcementFailed('Integer must be of type int or long')
 
     # min
     if self.min != None and len(value) < self.min:

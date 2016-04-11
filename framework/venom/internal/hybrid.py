@@ -66,8 +66,8 @@ class HybridModel(object):
     for document in documents:
       ndb_urlsafe_key = document['venom_model_key'][0].value
       ndb_key = ndb.Key(urlsafe=ndb_urlsafe_key)
-      entity = ndb_key.get()
-      entities.append(entity)
+      entities.append(ndb_key)
+    entities = ndb.get_multi(entities)
     return entities
   
   def put(self):

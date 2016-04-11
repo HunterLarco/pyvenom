@@ -49,7 +49,12 @@ class PropertyQuery(QueryComponent):
     return self.property.search
   
   def to_query_string(self):
-    return '{} {} {!r}'.format(self.property._code_name, self.operator, self.value) 
+    value = self.value
+    if isinstance(value, str):
+      value = '{}'.format(value.replace('"', '\\"'))
+    if self.operator == self.NE:
+      return '(NOT {} = {})'.format(self.property._name, value)
+    return '{} {} {}'.format(self.property._name, self.operator, value) 
 
 
 class Query(QueryComponent):
@@ -57,6 +62,7 @@ class Query(QueryComponent):
     QueryComponent.require(queries)
     self.queries = queries
     self._and = AND(*queries)
+    self._model = None
   
   def uses_search_api(self):
     return self._contains_search_property() or self._contains_illegal_query()
@@ -84,6 +90,19 @@ class Query(QueryComponent):
   
   def to_query_string(self):
     return self._and.to_query_string()
+  
+  def __call__(self):
+    if not self._model:
+      raise Exception('Query cannot execute outside of a venom.Model class')
+    if self.uses_search_api():
+      return self._execute_search_query()
+    return self._execute_ndb_query()
+  
+  def _execute_search_query(self):
+    return self._model._query_by_search(self)
+  
+  def _execute_ndb_query(self):
+    pass
           
 
 class QueryDict(dict):

@@ -137,17 +137,18 @@ class String(Property):
   ))
   
   def __init__(self, required=False, default=None, min=None, max=500, characters=None, choices=None):
-    super(String, self).__init__(required=required, default=default, choices=choices)
     self.max = max
     self.min = min
     self.characters = characters
+    super(String, self).__init__(required=required, default=default, choices=choices)
   
   def _on_query(self):
     if self.max == None or self.max > 500:
       self.search = True
   
   def to_ndb_property(self):
-    return ndb.StringProperty(indexed=False)
+    indexed = self.is_queried and not self.search
+    return ndb.StringProperty(indexed=indexed)
   
   def to_search_field(self):
     return search.TextField
@@ -159,18 +160,18 @@ class String(Property):
     # type str
     if not isinstance(value, str):
       raise PropertyEnforcementFailed('StringProperty must be of type str')
-        #
-    # # min
-    # if self.min != None and len(value) < self.min:
-    #   raise PropertyEnforcementFailed('StringProperty value less than minimum character length')
-    #
-    # # max
-    # if self.max != None and len(value) > self.max:
-    #   raise PropertyEnforcementFailed('StringProperty value greater than maximum character length')
-    #
-    # # characters
-    # if self.characters != None and len(set(value) - set(self.characters)) > 0:
-    #   raise PropertyEnforcementFailed('StringProperty value contains characters not permitted from "{}"'.format(self.characters))
+
+    # min
+    if self.min != None and len(value) < self.min:
+      raise PropertyEnforcementFailed('StringProperty value less than minimum character length')
+
+    # max
+    if self.max != None and len(value) > self.max:
+      raise PropertyEnforcementFailed('StringProperty value greater than maximum character length')
+
+    # characters
+    if self.characters != None and len(set(value) - set(self.characters)) > 0:
+      raise PropertyEnforcementFailed('StringProperty value contains characters not permitted from "{}"'.format(self.characters))
 
 
 class Integer(Property):
@@ -184,10 +185,13 @@ class Integer(Property):
   ))
   
   def __init__(self, required=False, default=None, min=None, max=None, choices=None):
+    self.min = min
+    self.max = max
     super(Integer, self).__init__(required=required, default=default, choices=choices)
   
   def to_ndb_property(self):
-    return ndb.IntegerProperty(indexed=False)
+    indexed = self.is_queried and not self.search
+    return ndb.IntegerProperty(indexed=indexed)
   
   def to_search_field(self):
     return search.NumberField
@@ -196,15 +200,15 @@ class Integer(Property):
     super(Integer, self).enforce(value)
     if value == None: return value
     
-    # # type str
-    # if not isinstance(value, int):
-    #   raise PropertyEnforcementFailed('Integer must be of type int')
-    #
-    # # min
-    # if self.min != None and len(value) < self.min:
-    #   raise PropertyEnforcementFailed('Integer value less than minimum character length')
-    #
-    # # max
-    # if self.max != None and len(value) > self.max:
-    #   raise PropertyEnforcementFailed('Integer value greater than maximum character length')
+    # type str
+    if not isinstance(value, int):
+      raise PropertyEnforcementFailed('Integer must be of type int')
+
+    # min
+    if self.min != None and len(value) < self.min:
+      raise PropertyEnforcementFailed('Integer value less than minimum character length')
+
+    # max
+    if self.max != None and len(value) > self.max:
+      raise PropertyEnforcementFailed('Integer value greater than maximum character length')
 

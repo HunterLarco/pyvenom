@@ -72,9 +72,10 @@ class HybridModel(object):
   
   def put(self):
     self._model.put()
-    self.property('venom_model_key', search.TextField, self._model.key.urlsafe())
-    results = self._index.put(self._to_search_document())
-    search_id = results[0].id
+    if self._search_fields:
+      self.property('venom_model_key', search.TextField, self._model.key.urlsafe())
+      results = self._index.put(self._to_search_document())
+      search_id = results[0].id
   
   def delete(self):
     pass

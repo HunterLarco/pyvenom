@@ -1,4 +1,4 @@
-__all__  = ['Query', 'PropertyQuery', 'QueryDict']
+__all__  = ['QueryComponent', 'Query', 'PropertyQuery', 'QueryDict']
 __all__ += ['QueryOperator', 'AND', 'OR']
 
 
@@ -90,10 +90,10 @@ class QueryDict(dict):
   def get_search_properties(self):
     properties = set()
     for _, query in self.items():
-      if not isinstance(query, Query):
+      if not isinstance(query, QueryComponent):
         continue
-      if query.search:
-        properties |= query.properties
+      if query.uses_search_api():
+        properties |= query.get_properties()
     return properties
       
 

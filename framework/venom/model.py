@@ -50,6 +50,19 @@ class Model(object):
       entities[i] = cls(**prop_values)
     return entities
   
+  @classmethod
+  def _query_by_ndb(cls, query):
+    hybrid = HybridModel(cls.__name__)
+    query = hybrid.query_by_ndb(query.to_ndb_query())
+    entities = []
+    for entity in query:
+      prop_values = {}
+      for prop_name, ndb_prop in entity._properties.items():
+        if prop_name in cls._properties:
+          prop_values[prop_name] = ndb_prop._get_value(entity)
+      entities.append(cls(**prop_values))
+    return entities
+  
   def __init__(self, **kwargs):
     self._values = {}
     self.populate(**kwargs)
@@ -62,14 +75,14 @@ class Model(object):
   def save(self):
     hybrid = HybridModel(self.__class__.__name__)
     for key, prop in self._properties.items():
-      hybrid.property(key, prop.to_ndb_property(), prop._value)
+      hybrid.property(key, prop.to_ndb_property(), prop.__get__(self, self.__class__))
     
     search_properties = self._queries.get_search_properties()
     # invert the properties dictionary
     property_to_name = {v: k for k, v in self._properties.items()}
     for prop in search_properties:
       name = property_to_name[prop]
-      hybrid.property(name, prop.to_search_field(), prop._value)
+      hybrid.property(name, prop.to_search_field(), prop.__get__(self, self.__class__))
     
     hybrid.put()
   

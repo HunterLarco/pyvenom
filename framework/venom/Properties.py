@@ -150,7 +150,7 @@ class String(Property):
   
   def to_ndb_property(self):
     indexed = self.is_queried and not self.search
-    return ndb.StringProperty(indexed=indexed)
+    return ndb.StringProperty(indexed=indexed, name=self._name)
   
   def to_search_field(self):
     return search.TextField
@@ -193,7 +193,7 @@ class Integer(Property):
   
   def to_ndb_property(self):
     indexed = self.is_queried and not self.search
-    return ndb.IntegerProperty(indexed=indexed)
+    return ndb.IntegerProperty(indexed=indexed, name=self._name)
   
   def to_search_field(self):
     return search.NumberField

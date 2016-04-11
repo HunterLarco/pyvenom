@@ -1,3 +1,7 @@
+# app engine imports
+from google.appengine.ext import ndb
+
+
 __all__  = ['QueryComponent', 'Query', 'PropertyQuery', 'QueryDict']
 __all__ += ['QueryOperator', 'AND', 'OR']
 
@@ -10,6 +14,9 @@ class QueryComponent(object):
     raise NotImplementedError()
   
   def to_query_string(self):
+    raise NotImplementedError()
+  
+  def to_ndb_query(self):
     raise NotImplementedError()
   
   def get_property_queries(self):
@@ -55,6 +62,25 @@ class PropertyQuery(QueryComponent):
     if self.operator == self.NE:
       return '(NOT {} = {})'.format(self.property._name, value)
     return '{} {} {}'.format(self.property._name, self.operator, value) 
+  
+  def to_ndb_query(self):
+    if self.operator == self.EQ:
+      return self.property.to_ndb_property() == self.value
+    elif self.operator == self.NE:
+      return self.property.to_ndb_property() != self.value
+    elif self.operator == self.LT:
+      return self.property.to_ndb_property() < self.value
+    elif self.operator == self.LE:
+      return self.property.to_ndb_property() <= self.value
+    elif self.operator == self.GT:
+      return self.property.to_ndb_property() > self.value
+    elif self.operator == self.GE:
+      return self.property.to_ndb_property() >= self.value
+    elif self.operator == self.IN:
+      return self.property.to_ndb_property().IN(self.value)
+    else:
+      raise Exception('Unknown operator')
+    
 
 
 class Query(QueryComponent):
@@ -91,6 +117,9 @@ class Query(QueryComponent):
   def to_query_string(self):
     return self._and.to_query_string()
   
+  def to_ndb_query(self):
+    return self._and.to_ndb_query()
+  
   def __call__(self):
     if not self._model:
       raise Exception('Query cannot execute outside of a venom.Model class')
@@ -102,7 +131,7 @@ class Query(QueryComponent):
     return self._model._query_by_search(self)
   
   def _execute_ndb_query(self):
-    pass
+    return self._model._query_by_ndb(self)
           
 
 class QueryDict(dict):
@@ -148,6 +177,9 @@ class AND(QueryOperator):
     query_strings = map(lambda x: x.to_query_string(), self.queries)
     query_string = ' AND '.join(query_strings)
     return '({})'.format(query_string)
+  
+  def to_ndb_query(self):
+    return ndb.AND(*map(lambda x: x.to_ndb_query(), self.queries))
 
 
 class OR(QueryOperator):
@@ -158,3 +190,6 @@ class OR(QueryOperator):
     query_strings = map(lambda x: x.to_query_string(), self.queries)
     query_string = ' OR '.join(query_strings)
     return '({})'.format(query_string)
+  
+  def to_ndb_query(self):
+    return ndb.OR(*map(lambda x: x.to_ndb_query(), self.queries))

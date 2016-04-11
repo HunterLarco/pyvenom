@@ -70,6 +70,9 @@ class HybridModel(object):
     entities = ndb.get_multi(entities)
     return entities
   
+  def query_by_ndb(self, query):
+    return self._model.query(query)
+  
   def put(self):
     self._model.put()
     if self._search_fields:

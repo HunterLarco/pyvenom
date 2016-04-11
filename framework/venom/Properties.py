@@ -198,6 +198,18 @@ class Integer(Property):
   def to_search_field(self):
     return search.NumberField
   
+  def __get__(self, instance, cls):
+    if instance == None:
+      # called on a class
+      return self
+    if not self._name in instance._values:
+      return int(self.default)
+    return int(instance._values[self._name])
+  
+  def __set__(self, instance, value):
+    self.enforce(value)
+    instance._values[self._name] = int(value)
+  
   def enforce(self, value):
     super(Integer, self).enforce(value)
     if value == None: return value

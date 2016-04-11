@@ -71,6 +71,15 @@ class Model(object):
     self.id = id
     self.populate(**kwargs)
   
+  def __iter__(self):
+    for key, prop in self._properties.items():
+      value = prop.__get__(self, self.__class__)
+      yield key, value
+    yield 'id', self.id
+  
+  def __json__(self):
+    return dict(self)
+  
   def populate(self, **kwargs):
     for key, value in kwargs.items():
       if key in self._properties:
@@ -89,6 +98,13 @@ class Model(object):
       hybrid.property(name, prop.to_search_field(), prop.__get__(self, self.__class__))
     
     hybrid.put()
+    
+    self.id = hybrid._model.key.id()
+    return self
+  
+  def delete(self):
+    hybrid = HybridModel(self.__class__.__name__)
+    hybrid.delete()
   
   @classmethod
   def get(cls, identifier):

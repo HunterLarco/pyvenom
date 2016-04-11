@@ -256,28 +256,15 @@ class List(Parameter):
     })
 
 
-class Model(Parameter):
-  def __init__(self, modelcls, key=None, type=None, required=True):
-    super(Model, self).__init__(required=required)
+class Model(Int):
+  def __init__(self, modelcls, required=True):
+    super(Model, self).__init__(required=required, min=0)
     self.model = modelcls
-    self.key = key
-    self.key_type = type
     self._options['model'] = modelcls
-    self._options['key'] = key
-    self._options['type'] = type
   
   def cast(self, value):
-    if not self.key:
-      entity = self.model.get_by_id(int(value))
-    else:
-      if self.key_type:
-        value = self.key_type.load(value)
-      if not hasattr(self.model, self.key):
-        raise ParameterCastingFailed('Key not found on model')
-      entity = self.model.query(getattr(self.model, self.key) == value).get()
-    if not entity:
-      raise ParameterCastingFailed('Entity not found')
-    return entity
+    value = super(Model, self).cast(value)
+    return self.model.get(value)
   
   def enforce(self, entity):
     pass
@@ -285,10 +272,6 @@ class Model(Parameter):
   def to_meta_dict(self):
     return removenull({
       'type': 'model',
-      'model': self.model.__name__,
-      'key': {
-        'name': self.key,
-        'type': self.key_type.to_meta_dict()
-      }
+      'model': self.model.__name__
     })
     

@@ -13,12 +13,15 @@ __all__ = ['Model']
 class MetaModel(type):
   def __init__(cls, name, bases, classdict):
     super(MetaModel, cls).__init__(name, bases, classdict)
+    cls.all = Query()
     cls._setup_properties()
     cls._setup_queries()
 
 
 class Model(object):
   __metaclass__ = MetaModel
+  
+  all = None
   
   @classmethod
   def _setup_properties(cls):
@@ -42,29 +45,30 @@ class Model(object):
   def _query_by_search(cls, query):
     hybrid = HybridModel(cls.__name__)
     entities = hybrid.query_by_search(query.to_query_string())
-    for i, entity in enumerate(entities):
-      prop_values = {}
-      for prop_name, ndb_prop in entity._properties.items():
-        if prop_name in cls._properties:
-          prop_values[prop_name] = ndb_prop._get_value(entity)
-      entities[i] = cls(**prop_values)
+    entities = map(cls._entity_to_model, entities)
     return entities
   
   @classmethod
   def _query_by_ndb(cls, query):
     hybrid = HybridModel(cls.__name__)
     query = hybrid.query_by_ndb(query.to_ndb_query())
-    entities = []
-    for entity in query:
-      prop_values = {}
-      for prop_name, ndb_prop in entity._properties.items():
-        if prop_name in cls._properties:
-          prop_values[prop_name] = ndb_prop._get_value(entity)
-      entities.append(cls(**prop_values))
+    entities = map(cls._entity_to_model, query)
     return entities
   
-  def __init__(self, **kwargs):
+  @classmethod
+  def _entity_to_model(cls, entity):
+    if entity == None:
+      return None
+    prop_values = {}
+    for prop_name, ndb_prop in entity._properties.items():
+      if prop_name in cls._properties:
+        prop_values[prop_name] = ndb_prop._get_value(entity)
+    prop_values['id'] = entity.key.id()
+    return cls(**prop_values)
+  
+  def __init__(self, id=None, **kwargs):
     self._values = {}
+    self.id = id
     self.populate(**kwargs)
   
   def populate(self, **kwargs):
@@ -88,7 +92,9 @@ class Model(object):
   
   @classmethod
   def get(cls, identifier):
-    pass
+    hybrid = HybridModel(cls.__name__)
+    entity = hybrid.get_by_id(identifier)
+    return cls._entity_to_model(entity)
   
   def __repr__(self):
     props = []

@@ -1,6 +1,7 @@
 # app engine imports
 from google.appengine.api import search
 from google.appengine.ext import ndb
+import logging
 
 
 __all__ = ['HybridModel']
@@ -71,6 +72,8 @@ class HybridModel(object):
     return entities
   
   def query_by_ndb(self, query):
+    if not query:
+      return self._model.query()
     return self._model.query(query)
   
   def put(self):
@@ -82,6 +85,12 @@ class HybridModel(object):
   
   def delete(self):
     pass
+  
+  def get_by_id(self, identifier):
+    if not isinstance(identifier, int):
+      logging.warn('Ignoring identifier because it is not an int')
+      return None
+    return self._model_cls.get_by_id(identifier)
 
 
 

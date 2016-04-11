@@ -118,6 +118,8 @@ class Query(QueryComponent):
     return self._and.to_query_string()
   
   def to_ndb_query(self):
+    if not self.queries:
+      return None
     return self._and.to_ndb_query()
   
   def __call__(self):

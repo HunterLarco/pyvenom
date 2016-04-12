@@ -81,8 +81,9 @@ class Route(object):
   
   def handle(self, request, response, error):
     with self.protocol(request, response, error) as protocol:
-      handler = self.handler(request, response, error)
-      handler.serve()
+      handler = self.handler(request, response, error, self)
+      response = handler.serve()
+      protocol._write(response)
   
   def url(self, params):
     if isinstance(params, dict):

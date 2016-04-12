@@ -64,9 +64,11 @@ class TextProtocol(Protocol):
     return { 'content-type': 'text/plain' }
   
   def write(self, value):
+    if not value: value = ''
     return str(value)
   
   def read(self, value):
+    if not value: return ''
     return str(value)
 
 
@@ -75,7 +77,9 @@ class JSONProtocol(Protocol):
     return { 'content-type': 'application/json' }
   
   def write(self, value):
+    if not value: value = {}
     return json.dumps(value, indent=2, sort_keys=True)
   
   def read(self, value):
+    if not value: return {}
     return json.loads(value)

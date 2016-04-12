@@ -12,6 +12,8 @@ class User(venom.Model):
   age       = venom.Properties.Int(min=0)
   location  = venom.Properties.Geopoint()
   
+  # upload = venom.Properties.ImageUpload()
+  
   adults = venom.Query(age >= 18)
   children = venom.Query(age < 18)
   
@@ -25,7 +27,6 @@ app.serve('/users/adults', User.adults)
 
 
 app.CRUD('/users', User)
-
 
 
 User.nearme(latlong=(45, 78))
@@ -42,4 +43,19 @@ class QueryHander(venom.RequestHandler):
 
 app.GET('/users/:agetype', QueryHander).url({
   'agetype': venom.Parameters.String(choices=['adult', 'child'])
+}).body({
+  'filename': venom.Parameter.String(min=3, max=100, characters='abcdefghijklmnop'),
+  'file': venom.Parameter.Integer(min=0),
+  'nested': {
+    'foo': venom.Parameter.Float()
+  },
+  # children
+  # properties
+  # template
+  'nested2': venom.Parameter.Dict({
+    'foo': venom.Parameter.Float()
+  }, required=False),
+  'email': vneom.Parameter.String(pattern='.*', min=2)
+}).headers({
+  'X-Authorization': venom.Parameter.Integer()
 })

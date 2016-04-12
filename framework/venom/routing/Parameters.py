@@ -1,3 +1,7 @@
+# system imports
+import re
+
+
 __all__ = ['Parameter']
 
 
@@ -10,10 +14,12 @@ class ParameterCastingFailed(Exception):
 
 class Parameter(object):
   _attributes = ['required']
+  _arguments = []
   
   required = True
   
   def __init__(self, required=True):
+    super(Parameter, self).__init__()
     self.required = required
   
   def load(self, value):
@@ -39,9 +45,21 @@ class Parameter(object):
   def __iter__(self):
     cls = self.__class__
     yield 'type', cls.__name__
+    
+    args = self._get_arguments_dict()
+    for key, value in args.items():
+      yield key, value
+    
     yield 'attributes', self._get_attributes_dict()
   
   def _get_attributes_dict(self):
+    """
+    ' Used by __repr__ and __iter__ to get all
+    ' properties that should be represented as an attribute
+    ' for this object. These are different than arguments.
+    ' For example, a List template is an argument whereas
+    ' required=False is an attribute.
+    """
     attrs = {}
     for attribute in self._attributes:
       if hasattr(self, attribute):
@@ -50,19 +68,36 @@ class Parameter(object):
         attrs[attribute] = value
     return attrs
   
+  def _get_arguments_dict(self):
+    """
+    ' Used by __repr__ and __iter__ to get all
+    ' properties that should be represented at a root
+    ' level of this object. These are different than attributes.
+    ' For example, a List template is an argument whereas
+    ' required=False is an attribute.
+    """
+    args = {}
+    for argument in self._arguments:
+      if hasattr(self, argument):
+        value = getattr(self, argument)
+        value = self._recursive_to_dict(value)
+        args[argument] = value
+    return args
+  
   def _recursive_to_dict(self, value):
     if isinstance(value, Parameter):
       value = dict(value)
     elif isinstance(value, list):
       value = map(self._recursive_to_dict, value)
     elif isinstance(value, dict):
-      value = { key: self._recursive_to_dict(val) for key, val in value.items() }
+      value = { key: self._recursive_to_dict(val) for key, val in value.items() } 
     return value
   
   def __repr__(self):
     cls = self.__class__
+    attributes = set(self._attributes + self._arguments)
     args = []
-    for attr in self._attributes:
+    for attr in attributes:
       if hasattr(self, attr):
         value = getattr(self, attr)
         if not value == getattr(cls, attr):
@@ -75,6 +110,7 @@ class Parameter(object):
 
 class ChoicesParameter(Parameter):
   _attributes = Parameter._attributes + ['choices']
+  _arguments = Parameter._arguments
   
   choices = None
   
@@ -93,17 +129,28 @@ class ChoicesParameter(Parameter):
 
 
 class String(ChoicesParameter):
-  _attributes = ChoicesParameter._attributes + ['min', 'max', 'characters']
+  _attributes = ChoicesParameter._attributes + ['min', 'max', 'characters', 'pattern']
+  _arguments = ChoicesParameter._arguments
   
   min = None
   max = None
   characters = None
+  pattern = None
   
-  def __init__(self, required=True, choices=None, min=None, max=None, characters=None):
+  def __init__(self, required=True, choices=None, min=None, max=None, characters=None, pattern=None):
     super(String, self).__init__(required=required, choices=choices)
     self.min = min
     self.max = max
     self.characters = characters
+    self.pattern = self._sanitize_pattern(pattern)
+  
+  def _sanitize_pattern(self, pattern):
+    if not pattern: return None
+    if not pattern.startswith('^'):
+      pattern = '^{}'.format(pattern)
+    if not pattern.endswith('$'):
+      pattern = '{}$'.format(pattern)
+    return pattern
   
   def cast(self, value):
     return str(value)
@@ -113,6 +160,7 @@ class String(ChoicesParameter):
     self._validate_min(value)
     self._validate_max(value)
     self._validate_characters(value)
+    self._validate_pattern(value)
   
   def _validate_min(self, value):
     if self.min == None: return
@@ -130,9 +178,15 @@ class String(ChoicesParameter):
     if difference > 0:
       raise ParameterValidationFailed('StringParameter value used disallowed characters')
   
+  def _validate_pattern(self, value):
+    if self.pattern == None: return
+    if not re.match(self.pattern, value):
+      raise ParameterValidationFailed('StringParameter did not adhere to pattern')
+  
   
 class Integer(ChoicesParameter):
   _attributes = ChoicesParameter._attributes + ['min', 'max']
+  _arguments = ChoicesParameter._arguments
   
   min = None
   max = None
@@ -167,7 +221,8 @@ class Float(Integer):
 
 
 class Dict(Parameter):
-  _attributes = Parameter._attributes + ['template']
+  _attributes = Parameter._attributes
+  _arguments = Parameter._arguments + ['template']
   
   template = None
   
@@ -196,7 +251,8 @@ class Dict(Parameter):
 
 
 class List(Parameter):
-  _attributes = Parameter._attributes + ['template', 'min', 'max']
+  _attributes = Parameter._attributes + ['min', 'max']
+  _arguments = Parameter._arguments + ['template']
   
   min = None
   max = None

@@ -4,6 +4,9 @@ __all__ = ['Protocol']
 # system imports
 import traceback
 
+# application imports
+from internal import __json__
+
 
 class ProtocolReadFailed(Exception):
   pass
@@ -72,9 +75,7 @@ class Protocol(object):
 class JSONProtocol(Protocol):
   def read(self, value):
     if not value: value = '{}'
-    from json import loads
-    return loads(value)
+    return __json__.loads(value)
   
   def write(self, value):
-    from json import dumps
-    self.response.write(dumps(value, indent=2, sort_keys=True))
+    self.response.write(__json__.dumps(value, indent=2, sort_keys=True))

@@ -8,7 +8,7 @@ class Property(object):
 class PropertiedClass(type):
   def __new__(metaclass, name, parents, dct):
     cls = super(PropertiedClass, metaclass).__new__(metaclass, name, parents, dct)
-    
+
     # Only works on indexed properties
     for key, value in dct.items():
       if isinstance(value, Property) and value.indexed:
@@ -19,7 +19,7 @@ class PropertiedClass(type):
         setattr(cls, queryKey, lambda val: query(val))
         setattr(cls, getKey  , lambda val: query(val).get())
         setattr(cls, hasKey  , lambda val: query(val).count() != 0)
-    
+
     return cls
 
 
@@ -35,17 +35,17 @@ class Protocol(venom.Protocols.Protocol):
     self.headers  = headers
     self.cookies  = cookies
     self.response = None
-  
+
   def __enter__(self):
     self.response[headers] = self.headers
     self.response.cookies  = self.cookies
-  
+
   def respond(self):
     raise NotImplemented()
-  
+
   def __exit__(self):
     pass
-    
+
 
 class TestHandlerGeneric(venom.RequestHandler):
   def post(self):
@@ -53,15 +53,15 @@ class TestHandlerGeneric(venom.RequestHandler):
     self.request.body.require
     self.request.body.maybe
     self.request.body.choose
-    
+
     userid = 1234567890
     User.require(userid)
     User.maybe(userid)
     User.choose(userid1, userid2)
-    
+
     file = self.request.multipart.require('file')
     key = venom.Buckets.save(file)
-    
+
     return venom.Protocols.json({
       'key': key
     }, headers={

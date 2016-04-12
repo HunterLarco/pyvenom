@@ -5,7 +5,11 @@ api_version: 1
 threadsafe: yes
 
 handlers:
-# MAIN SCRIPT
+# APP STATS
+- url: /stats(/.*)?
+  script: google.appengine.ext.appstats.ui.app
+  
+# API SCRIPT
 - url: .*
   script: app.app
 
@@ -15,5 +19,5 @@ libraries:
   version: "2.5.1"
 
 builtins:
-- remote_api: on
 - appstats: on
+- remote_api: on

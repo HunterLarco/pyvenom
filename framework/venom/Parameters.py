@@ -37,6 +37,8 @@ class Parameter(object):
     
     try:
       value = self.cast(value)
+    except ParameterCastingFailed as err:
+      raise err
     except Exception:
       raise ParameterCastingFailed('Parameter casting failed')
     
@@ -138,7 +140,7 @@ class String(Parameter):
     self._options['characters'] = characters
   
   def cast(self, value):
-    return value
+    return str(value)
   
   def enforce(self, value):
     self.enforce_minimum(value)
@@ -195,7 +197,7 @@ class Dict(Parameter):
           raise Exception('Unknown Dict parameter template value')
   
   def cast(self, value):
-    return value
+    return dict(value)
   
   def enforce(self, dict_value):
     for key, param in self.template.items():
@@ -248,7 +250,28 @@ class List(Parameter):
     return removenull({
       'type': 'list',
       'min': self.min,
-      'max': self.min,
+      'max': self.max,
       'required': self.required,
       'template': self.template.to_meta_dict()
     })
+
+
+class Model(Int):
+  def __init__(self, modelcls, required=True):
+    super(Model, self).__init__(required=required, min=0)
+    self.model = modelcls
+    self._options['model'] = modelcls
+  
+  def cast(self, value):
+    value = super(Model, self).cast(value)
+    return self.model.get(value)
+  
+  def enforce(self, entity):
+    pass
+  
+  def to_meta_dict(self):
+    return removenull({
+      'type': 'model',
+      'model': self.model.__name__
+    })
+    

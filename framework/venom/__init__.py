@@ -1,7 +1,5 @@
 __all__ = []
 
 
-from wsgi_entry import *
-__all__ += wsgi_entry.__all__
-
-
+from routing import *
+__all__ += routing.__all__

@@ -1,5 +1,4 @@
 import venom
-from google.appengine.ext import ndb
 
 #
 # class File(venom.Model):
@@ -11,16 +10,9 @@ from google.appengine.ext import ndb
 #   author = File.author
 #
 
-class File(ndb.Model):
-  fileid = ndb.StringProperty(indexed=True)
-  thing = ndb.IntegerProperty(indexed=True)
-  
-  def to_dict(self):
-    return {
-      'fileid': self.fileid,
-      'thing': self.thing,
-      'id': self.key.id()
-    }
+class File(venom.Model):
+  fileid = venom.Properties.String()
+  thing = venom.Properties.Integer()
 
 
 appv1 = venom.Application(version=1, debug=True, protocol=venom.Protocols.JSONProtocol)
@@ -33,11 +25,11 @@ app = venom.VersionDispatcher(appv1, appv2)
 
 class FileHandlerV1(venom.RequestHandler):
   def get(self):
-    return { 'file': self.url.get('fileid').to_dict() }
+    return { 'file_thing': self.url.get('fileid').thing }
   
   def post(self):
     fileid, thing = self.body.get('fileid', 'thing')
-    File(fileid=fileid, thing=thing).put()
+    return { 'file': File(fileid=fileid, thing=thing).save() }
 
 
 class DefaultHandlerV2(venom.RequestHandler):
@@ -49,8 +41,8 @@ class DefaultHandlerV2(venom.RequestHandler):
 
 
 
-appv1.GET('/serve/:fileid', FileHandlerV1).url({
-  'fileid': venom.Parameters.Model(File, key='fileid', type=venom.Parameters.String())
+route1 = appv1.GET('/serve/:fileid', FileHandlerV1).url({
+  'fileid': venom.Parameters.Model(File)
 })
 
 appv1.POST('/serve', FileHandlerV1).body({

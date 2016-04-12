@@ -4,6 +4,9 @@ __all__ = ['Parameter']
 class ParameterValidationFailed(Exception):
   pass
 
+class ParameterCastingFailed(Exception):
+  pass
+
 
 class Parameter(object):
   _attributes = ['required']
@@ -19,7 +22,11 @@ class Parameter(object):
         raise ParameterValidationFailed('Parameter was None when required')
       return None
     
-    value = self.cast(value)
+    try:
+      value = self.cast(value)
+    except:
+      raise ParameterCastingFailed('Parameter failed casting')
+      
     self.validate(value)
     return value
   

@@ -5,9 +5,13 @@ import webapp2
 
 
 class WSGIEntryPoint(object):
-  allowed_methods = frozenset(('GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'DELETE', 'OPTIONS', 'TRACE'))
+  allowed_methods = frozenset((
+    'GET', 'POST', 'PUT', 'PATCH',
+    'HEAD', 'DELETE', 'OPTIONS', 'TRACE'
+  ))
   
   def __init__(self):
+    super(WSGIEntryPoint, self).__init__()
     self._form_request_handler()
     self.wsgi = webapp2.WSGIApplication([('.*', self._entrypoint)], debug=False)
     self.wsgi.allowed_methods = self.allowed_methods

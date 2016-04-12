@@ -1,14 +1,10 @@
 import venom
 
 
-class Test2(venom.WSGIEntryPoint):
-  def dispatch(self, request, response, error):
-    response.write('test2')
+import venom
 
+app = venom.Application()
 
-class Test(venom.WSGIEntryPoint):
-  def dispatch(self, request, response, error):
-    return Test2()
-
-
-app = Test()
+app.GET('/test/:thing/and/:thing2', venom.RequestHandler).url({
+  'thing': venom.Parameters.String(pattern='[^asd]+')
+})

@@ -1,15 +1,16 @@
 # package imports
 import routes
 from wsgi_entry import WSGIEntryPoint
+import Protocols
 
 
 __all__ = ['Application']
 
 
 class _RoutesShortHand(object):
-  def __init__(self, routes=None, protocol=None):
+  def __init__(self, routes=None, protocol=Protocols.JSONProtocol):
     super(_RoutesShortHand, self).__init__()
-    self.protocol = None
+    self.protocol = protocol
     self.routes = routes if routes else []
   
   def _add_route(self, path, handler, protocol, route_cls):

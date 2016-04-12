@@ -1,6 +1,6 @@
 # package imports
 import Parameters
-# import Protocols
+import Protocols
 from handlers import Servable
 
 
@@ -56,7 +56,7 @@ class Route(object):
   
   _attributes = ['path']
   
-  def __init__(self, path, handler, protocol=None):
+  def __init__(self, path, handler, protocol=Protocols.JSONProtocol):
     super(Route, self).__init__()
     
     if not issubclass(handler, Servable):
@@ -80,8 +80,9 @@ class Route(object):
     return self.matches_path(path) and self.matches_method(method)
   
   def handle(self, request, response, error):
-    handler = self.handler(request, response, error)
-    handler.serve()
+    with self.protocol(request, response, error) as protocol:
+      handler = self.handler(request, response, error)
+      handler.serve()
   
   def url(self, params):
     if isinstance(params, dict):

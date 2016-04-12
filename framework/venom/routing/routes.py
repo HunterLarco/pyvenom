@@ -4,37 +4,13 @@ import Parameters
 from handlers import Servable
 
 
-__all__  = ['Route']
+__all__  = ['Route', 'Path']
 __all__ += ['GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'DELETE', 'OPTIONS', 'TRACE']
 
 
-class Route(object):
-  allowed_methods = frozenset((
-    'GET', 'POST', 'PUT', 'PATCH',
-    'HEAD', 'DELETE', 'OPTIONS', 'TRACE'
-  ))
-  
-  _attributes = ['path']
-  
-  def __init__(self, path, handler, protocol=None):
-    super(Route, self).__init__()
-    
-    if not issubclass(handler, Servable):
-      raise Exception('Route handler must be a Servable subclass')
-    
-    self.path = path
-    self.handler = handler
-    self.protocol = protocol
-    self._url = Parameters.Dict({})
-    self._body = Parameters.Dict({})
-    self._query = Parameters.Dict({})
-    self._headers = Parameters.Dict({})
-  
-  def matches_method(self, method):
-    return method.upper() in self.allowed_methods
-  
-  def matches_path(self, path):
-    desired_path = self._traverse_path(self.path)
+class Path(str):
+  def matches(self, path):
+    desired_path = self._traverse_path(self)
     given_path = self._traverse_path(path)
     
     if len(desired_path) != len(given_path):
@@ -58,11 +34,11 @@ class Route(object):
     if path.startswith('/'): path = path[1:]
     return path
   
-  def matches(self, path, method):
-    return self.matches_path(path) and self.matches_method(method)
+  def has_parameters(self):
+    return ':' in self
   
-  def get_url_parameters(self, path):
-    desired_path = self._traverse_path(self.path)
+  def get_parameters(self, path):
+    desired_path = self._traverse_path(self)
     given_path = self._traverse_path(path)
     
     return {
@@ -70,6 +46,38 @@ class Route(object):
       for desired, given in zip(desired_path, given_path)
       if desired.startswith(':')
     }
+
+
+class Route(object):
+  allowed_methods = frozenset((
+    'GET', 'POST', 'PUT', 'PATCH',
+    'HEAD', 'DELETE', 'OPTIONS', 'TRACE'
+  ))
+  
+  _attributes = ['path']
+  
+  def __init__(self, path, handler, protocol=None):
+    super(Route, self).__init__()
+    
+    if not issubclass(handler, Servable):
+      raise Exception('Route handler must be a Servable subclass')
+    
+    self.path = Path(path)
+    self.handler = handler
+    self.protocol = protocol
+    self._url = Parameters.Dict({})
+    self._body = Parameters.Dict({})
+    self._query = Parameters.Dict({})
+    self._headers = Parameters.Dict({})
+  
+  def matches_method(self, method):
+    return method.upper() in self.allowed_methods
+  
+  def matches_path(self, path):
+    return self.path.matches(path)
+  
+  def matches(self, path, method):
+    return self.matches_path(path) and self.matches_method(method)
   
   def handle(self, request, response, error):
     handler = self.handler(request, response, error)

@@ -1,7 +1,6 @@
 import venom
 
 
-import venom
 
 app = venom.Application()
 

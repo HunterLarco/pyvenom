@@ -6,6 +6,7 @@ import routes
 from wsgi_entry import WSGIEntryPoint
 import Protocols
 from handlers import RequestHandler
+from ..__ui__ import ui
 
 
 __all__ = ['Application', 'VersionDispatch']
@@ -21,10 +22,12 @@ def generate_meta_handler(app):
       for route in app.routes:
         if route.matches_path(path):
           meta['routes'].append({
+            'headers': dict(route._headers),
             'url': dict(route._url),
             'query': dict(route._query),
             'body': dict(route._body),
-            'methods': list(route.allowed_methods)
+            'methods': list(route.allowed_methods),
+            'ui.guid': ui.get_guid(route)
           })
       return meta
   return MetaRouteHandler
@@ -33,14 +36,19 @@ def generate_meta_handler(app):
 def generate_routes_handler(app):
   class GetRoutesHandler(RequestHandler):
     def serve(self):
-      routes = defaultdict(set)
+      returned_routes = []
+      
       for route in app.routes:
         if not route.path.startswith('/api/'): continue
-        routes[route.path] = routes[route.path].union(route.allowed_methods)
-      for route, methods in routes.items():
-        routes[route] = list(methods)
+        returned_routes.append({
+          'path': route.path,
+          'methods': list(route.allowed_methods),
+          'ui.guid': ui.get_guid(route)
+        })
+      
       return {
-        'routes': routes
+        'routes': returned_routes,
+        'version': app.version
       }
   return GetRoutesHandler
 

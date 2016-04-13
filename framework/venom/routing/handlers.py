@@ -38,6 +38,8 @@ class RequestHandler(Servable):
     self.query = ParameterDict(self._get_query_parameters(request))
     self.headers = HeaderDict(self._get_headers_parameters(request))
     self.body = ParameterDict(self._get_body_parameters(request, protocol))
+    
+    self.throw = error
   
   def _get_headers_parameters(self, request):
     return self.route._headers.load(request.headers)

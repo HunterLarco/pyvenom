@@ -81,7 +81,7 @@ class PropertyQuery(QueryComponent):
   def uses_search_api(self):
     return self.property.search
   
-  def get_value(self, args, kwargs):
+  def _get_value(self, args, kwargs):
     if not isinstance(self.value, QueryParameter):
       return self.value
     if self.value.name == None:
@@ -98,6 +98,10 @@ class PropertyQuery(QueryComponent):
       kwarg = kwargs[self.value.name]
       del kwargs[self.value.name]
       return kwarg
+  
+  def get_value(self, args, kwargs):
+    value = self._get_value(args, kwargs)
+    return self.property._hook_set(value)
   
   def to_query_string(self, args, kwargs):
     value = self.get_value(args, kwargs)
@@ -129,10 +133,17 @@ class PropertyQuery(QueryComponent):
 
 class Query(QueryComponent):
   def __init__(self, *queries):
+    queries = map(self._sanitize_queries, queries)
     QueryComponent.require(queries)
     self.queries = queries
     self._and = AND(*queries)
     self._model = None
+  
+  @staticmethod
+  def _sanitize_queries(query):
+    if not isinstance(query, QueryComponent):
+      return query == QueryParameter()
+    return query
   
   def uses_search_api(self):
     return self._contains_search_property() or self._contains_illegal_query()

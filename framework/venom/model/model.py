@@ -63,8 +63,9 @@ class Model(object):
     for prop_name, ndb_prop in entity._properties.items():
       if prop_name in cls._properties:
         prop_values[prop_name] = ndb_prop._get_value(entity)
-    prop_values['id'] = entity.key.id()
-    return cls(**prop_values)
+    model = cls(id=entity.key.id())
+    model._from_database(**prop_values)
+    return model
   
   def __init__(self, id=None, **kwargs):
     self._values = {}
@@ -73,12 +74,18 @@ class Model(object):
   
   def __iter__(self):
     for key, prop in self._properties.items():
+      if prop.hidden: continue
       value = prop.__get__(self, self.__class__)
       yield key, value
     yield 'id', self.id
   
   def __json__(self):
     return dict(self)
+  
+  def _from_database(self, **kwargs):
+    for key, value in kwargs.items():
+      if key in self._properties:
+        self._values[key] = value
   
   def populate(self, **kwargs):
     for key, value in kwargs.items():

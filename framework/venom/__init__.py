@@ -1,7 +1,8 @@
-__all__ = ['monkeypatches']
+__all__ = ['monkeypatches', 'vendor']
 
 
 import monkeypatches
+import vendor
 
 
 from routing import *

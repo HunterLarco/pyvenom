@@ -26,13 +26,14 @@ class InvalidPropertyInitialization(Exception):
 class Property(object):
   allowed_operators = frozenset()
   
-  def __init__(self, required=False, default=None, choices=None):
+  def __init__(self, required=False, default=None, choices=None, hidden=False):
     if required and default != None:
       raise InvalidPropertyInitialization('Property have a default value if required')
     
     self.required = required
     self.default = default
     self.choices = choices
+    self.hidden = hidden
     
     self._name = None
     
@@ -64,12 +65,18 @@ class Property(object):
       # called on a class
       return self
     if not self._name in instance._values:
-      return self.default
-    return instance._values[self._name]
+      return self._hook_get(self.default)
+    return self._hook_get(instance._values[self._name])
 
   def __set__(self, instance, value):
     self.enforce(value)
-    instance._values[self._name] = value
+    instance._values[self._name] = self._hook_set(value)
+
+  def _hook_set(self, value):
+    return value
+  
+  def _hook_get(self, value):
+    return value
 
   def __delete__(self,instance):
     raise AttributeError('Can\'t delete attribute')
@@ -128,7 +135,7 @@ class Property(object):
   
   def __repr__(self):
     classname = self.__class__.__name__
-    return '{}(default={}, required={}, choices={})'.format(classname, self.default, self.required, self.choices)
+    return '{}(default={!r}, required={!r}, choices={!r}, hidden={!r})'.format(classname, self.default, self.required, self.choices, self.hidden)
   
 
 class String(Property):
@@ -138,11 +145,11 @@ class String(Property):
     PropertyQuery.IN
   ))
   
-  def __init__(self, required=False, default=None, min=None, max=500, characters=None, choices=None):
+  def __init__(self, required=False, default=None, min=None, max=500, characters=None, choices=None, hidden=False):
     self.max = max
     self.min = min
     self.characters = characters
-    super(String, self).__init__(required=required, default=default, choices=choices)
+    super(String, self).__init__(required=required, default=default, choices=choices, hidden=hidden)
   
   def _on_query(self):
     if self.max == None or self.max > 500:
@@ -176,6 +183,18 @@ class String(Property):
       raise PropertyEnforcementFailed('StringProperty value contains characters not permitted from "{}"'.format(self.characters))
 
 
+class Password(String):
+  allowed_operators = frozenset((
+    PropertyQuery.EQ
+  ))
+  
+  def __init__(self, required=False, default=None, min=None, max=500, characters=None, hidden=False):
+    super(Password, self).__init__(required=required, default=default, hidden=hidden)
+  
+  def _hook_set(self, value):
+    import hashlib
+    return hashlib.sha256(value).hexdigest()
+
 class Integer(Property):
   allowed_operators = frozenset((
     PropertyQuery.EQ,
@@ -186,10 +205,10 @@ class Integer(Property):
     PropertyQuery.NE
   ))
   
-  def __init__(self, required=False, default=None, min=None, max=None, choices=None):
+  def __init__(self, required=False, default=None, min=None, max=None, choices=None, hidden=False):
     self.min = min
     self.max = max
-    super(Integer, self).__init__(required=required, default=default, choices=choices)
+    super(Integer, self).__init__(required=required, default=default, choices=choices, hidden=hidden)
   
   def to_ndb_property(self):
     indexed = self.is_queried and not self.search
@@ -204,11 +223,16 @@ class Integer(Property):
       return self
     if not self._name in instance._values:
       return int(self.default)
-    return int(instance._values[self._name])
+    value = instance._values[self._name]
+    if value == None:
+      return None
+    return int(value)
   
   def __set__(self, instance, value):
+    if value == None:
+      value = self.default
     self.enforce(value)
-    instance._values[self._name] = int(value)
+    instance._values[self._name] = int(value) if value != None else None
   
   def enforce(self, value):
     super(Integer, self).enforce(value)
@@ -219,10 +243,10 @@ class Integer(Property):
       raise PropertyEnforcementFailed('Integer must be of type int or long')
 
     # min
-    if self.min != None and len(value) < self.min:
+    if self.min != None and value < self.min:
       raise PropertyEnforcementFailed('Integer value less than minimum character length')
 
     # max
-    if self.max != None and len(value) > self.max:
+    if self.max != None and value > self.max:
       raise PropertyEnforcementFailed('Integer value greater than maximum character length')
 

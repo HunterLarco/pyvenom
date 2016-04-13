@@ -1,4 +1,7 @@
-__all__ = []
+__all__ = ['monkeypatches']
+
+
+import monkeypatches
 
 
 from routing import *

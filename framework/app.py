@@ -41,7 +41,9 @@ class QueryHandler(venom.RequestHandler):
     return { 'user': User(username=username, password=password).save() }
 
 
+venom.ui(
 appv1.GET('/hunter', QueryHandler)
+, 23456789)
 
 appv1.POST('/hunter', QueryHandler).body({
   'username': venom.Parameters.String(min=3),

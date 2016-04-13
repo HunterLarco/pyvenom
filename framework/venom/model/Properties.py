@@ -128,7 +128,7 @@ class Property(object):
   
   def __repr__(self):
     classname = self.__class__.__name__
-    return '{}(value={}, default={}, required={}, choices={})'.format(classname, self._value, self.default, self.required, self.choices)
+    return '{}(default={}, required={}, choices={})'.format(classname, self.default, self.required, self.choices)
   
 
 class String(Property):

@@ -3,10 +3,10 @@ import venom
 
 class User(venom.Model):
   # username = venom.StringProperty(unique=True)
-  username = venom.Properties.String()
-  password = venom.Properties.String()
+  username = venom.Properties.String(max=20)
+  password = venom.Properties.String(max=20)
   
-  username_hunter = venom.Query(username == 'hunter')
+  by_username = venom.Query(username == venom.QP())
 
 
 class Handler(venom.RequestHandler):

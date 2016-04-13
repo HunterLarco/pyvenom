@@ -3,6 +3,7 @@ from google.appengine.ext import ndb
 
 
 __all__  = ['QueryComponent', 'Query', 'PropertyQuery', 'QueryDict']
+__all__ += ['QueryParameter', 'QP']
 __all__ += ['QueryOperator', 'AND', 'OR']
 
 
@@ -13,10 +14,10 @@ class QueryComponent(object):
   def uses_search_api(self):
     raise NotImplementedError()
   
-  def to_query_string(self):
+  def to_query_string(self, args, kwargs):
     raise NotImplementedError()
   
-  def to_ndb_query(self):
+  def to_ndb_query(self, args, kwargs):
     raise NotImplementedError()
   
   def get_property_queries(self):
@@ -27,6 +28,26 @@ class QueryComponent(object):
     for obj in objects:
       if not isinstance(obj, cls):
         raise Exception('{} found when expecting an instance of QueryComponent'.format(obj))
+
+
+class QueryParameter(object):
+  DEFAULT = lambda: None
+  
+  def __init__(self, name=None, default=DEFAULT):
+    super(QueryParameter, self).__init__()
+    self.name = name
+    self.default = default
+  
+  def has_default(self):
+    return self.default != self.DEFAULT
+  
+  def __repr__(self):
+    optional = ''
+    if self.name != None:
+      optional = 'name={!r}'.format(self.name)
+    return 'QueryParameter({})'.format(optional)
+
+QP = QueryParameter
 
 
 class PropertyQuery(QueryComponent):
@@ -44,7 +65,12 @@ class PropertyQuery(QueryComponent):
     self.value = value
   
   def __repr__(self):
-    return self.to_query_string()
+    value = self.value
+    if isinstance(value, str):
+      value = '{}'.format(value.replace('"', '\\"'))
+    if self.operator == self.NE:
+      return '(NOT {} = {})'.format(self.property._name, value)
+    return '{} {} {}'.format(self.property._name, self.operator, value)
   
   def get_property_queries(self):
     return [self]
@@ -55,29 +81,47 @@ class PropertyQuery(QueryComponent):
   def uses_search_api(self):
     return self.property.search
   
-  def to_query_string(self):
-    value = self.value
+  def get_value(self, args, kwargs):
+    if not isinstance(self.value, QueryParameter):
+      return self.value
+    if self.value.name == None:
+      if len(args) == 0:
+        raise Exception('Not enough parameters for Query to execute')
+      arg = args[0]
+      del args[0]
+      return arg
+    else:
+      if not self.value.name in kwargs:
+        if not self.value.has_default():
+          raise Exception('Parameter keyword "{}" not found'.format(self.value.name))
+        return self.value.default
+      kwarg = kwargs[self.value.name]
+      del kwargs[self.value.name]
+      return kwarg
+  
+  def to_query_string(self, args, kwargs):
+    value = self.get_value(args, kwargs)
     if isinstance(value, str):
       value = '{}'.format(value.replace('"', '\\"'))
     if self.operator == self.NE:
       return '(NOT {} = {})'.format(self.property._name, value)
     return '{} {} {}'.format(self.property._name, self.operator, value) 
   
-  def to_ndb_query(self):
+  def to_ndb_query(self, args, kwargs):
     if self.operator == self.EQ:
-      return self.property.to_ndb_property() == self.value
+      return self.property.to_ndb_property() == self.get_value(args, kwargs)
     elif self.operator == self.NE:
-      return self.property.to_ndb_property() != self.value
+      return self.property.to_ndb_property() != self.get_value(args, kwargs)
     elif self.operator == self.LT:
-      return self.property.to_ndb_property() < self.value
+      return self.property.to_ndb_property() < self.get_value(args, kwargs)
     elif self.operator == self.LE:
-      return self.property.to_ndb_property() <= self.value
+      return self.property.to_ndb_property() <= self.get_value(args, kwargs)
     elif self.operator == self.GT:
-      return self.property.to_ndb_property() > self.value
+      return self.property.to_ndb_property() > self.get_value(args, kwargs)
     elif self.operator == self.GE:
-      return self.property.to_ndb_property() >= self.value
+      return self.property.to_ndb_property() >= self.get_value(args, kwargs)
     elif self.operator == self.IN:
-      return self.property.to_ndb_property().IN(self.value)
+      return self.property.to_ndb_property().IN(self.get_value(args, kwargs))
     else:
       raise Exception('Unknown operator')
     
@@ -114,26 +158,29 @@ class Query(QueryComponent):
   def get_properties(self):
     return self._and.get_properties()
   
-  def to_query_string(self):
-    return self._and.to_query_string()
+  def to_query_string(self, args, kwargs):
+    return self._and.to_query_string(args, kwargs)
   
-  def to_ndb_query(self):
+  def to_ndb_query(self, args, kwargs):
     if not self.queries:
       return None
-    return self._and.to_ndb_query()
+    return self._and.to_ndb_query(args, kwargs)
   
-  def __call__(self):
+  def __call__(self, *args, **kwargs):
     if not self._model:
       raise Exception('Query cannot execute outside of a venom.Model class')
     if self.uses_search_api():
-      return self._execute_search_query()
-    return self._execute_ndb_query()
+      return self._execute_search_query(list(args), kwargs)
+    return self._execute_ndb_query(list(args), kwargs)
   
-  def _execute_search_query(self):
-    return self._model._query_by_search(self)
+  def _execute_search_query(self, args, kwargs):
+    return self._model._query_by_search(self, args, kwargs)
   
-  def _execute_ndb_query(self):
-    return self._model._query_by_ndb(self)
+  def _execute_ndb_query(self, args, kwargs):
+    return self._model._query_by_ndb(self, args, kwargs)
+  
+  def __repr__(self):
+    return 'Query({})'.format(self._and)
           
 
 class QueryDict(dict):
@@ -175,23 +222,23 @@ class AND(QueryOperator):
   def __repr__(self):
     return 'AND({})'.format(', '.join(map(repr, self.queries)))
   
-  def to_query_string(self):
-    query_strings = map(lambda x: x.to_query_string(), self.queries)
+  def to_query_string(self, args, kwargs):
+    query_strings = map(lambda x: x.to_query_string(args, kwargs), self.queries)
     query_string = ' AND '.join(query_strings)
     return '({})'.format(query_string)
   
-  def to_ndb_query(self):
-    return ndb.AND(*map(lambda x: x.to_ndb_query(), self.queries))
+  def to_ndb_query(self, args, kwargs):
+    return ndb.AND(*map(lambda x: x.to_ndb_query(args, kwargs), self.queries))
 
 
 class OR(QueryOperator):
   def __repr__(self):
     return 'OR({})'.format(', '.join(map(repr, self.queries)))
   
-  def to_query_string(self):
-    query_strings = map(lambda x: x.to_query_string(), self.queries)
+  def to_query_string(self, args, kwargs):
+    query_strings = map(lambda x: x.to_query_string(args, kwargs), self.queries)
     query_string = ' OR '.join(query_strings)
     return '({})'.format(query_string)
   
-  def to_ndb_query(self):
-    return ndb.OR(*map(lambda x: x.to_ndb_query(), self.queries))
+  def to_ndb_query(self, args, kwargs):
+    return ndb.OR(*map(lambda x: x.to_ndb_query(args, kwargs), self.queries))

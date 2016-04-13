@@ -42,16 +42,16 @@ class Model(object):
         value._model = cls
   
   @classmethod
-  def _query_by_search(cls, query):
+  def _query_by_search(cls, query, args, kwargs):
     hybrid = HybridModel(cls.__name__)
-    entities = hybrid.query_by_search(query.to_query_string())
+    entities = hybrid.query_by_search(query.to_query_string(args, kwargs))
     entities = map(cls._entity_to_model, entities)
     return entities
   
   @classmethod
-  def _query_by_ndb(cls, query):
+  def _query_by_ndb(cls, query, args, kwargs):
     hybrid = HybridModel(cls.__name__)
-    query = hybrid.query_by_ndb(query.to_ndb_query())
+    query = hybrid.query_by_ndb(query.to_ndb_query(args, kwargs))
     entities = map(cls._entity_to_model, query)
     return entities
   

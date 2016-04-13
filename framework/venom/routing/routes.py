@@ -81,7 +81,7 @@ class Route(object):
   
   def handle(self, request, response, error):
     with self.protocol(request, response, error) as protocol:
-      handler = self.handler(request, response, error, self)
+      handler = self.handler(request, response, error, self, protocol)
       response = handler.serve()
       protocol._write(response)
   

@@ -8,7 +8,7 @@ import Protocols
 from handlers import RequestHandler
 
 
-__all__ = ['Application']
+__all__ = ['Application', 'VersionDispatch']
 
 
 def generate_meta_handler(app):
@@ -84,6 +84,7 @@ class _RoutesShortHand(WSGIEntryPoint):
 
 class Application(_RoutesShortHand):
   allowed_methods = routes.Route.allowed_methods
+  allowed_prefixes = frozenset(('api', 'meta', 'routes'))
   internal_protocol = Protocols.JSONProtocol
   
   def __init__(self, routes=None, version=1, protocol=Protocols.JSONProtocol):
@@ -125,4 +126,24 @@ class Application(_RoutesShortHand):
   
   def _add_routes_route(self):
     return super(Application, self)._add_route(self._routes_prefix, generate_routes_handler(self), self.internal_protocol, routes.Route)
+  
+  def matches_version(self, path):
+    for prefix in self.allowed_prefixes:
+      prefix = '/{}/v{}/'.format(prefix, self.version)
+      if path.startswith(prefix) or path == prefix[:-1]:
+        return True
+    return False
+
+
+class VersionDispatch(WSGIEntryPoint):
+  def __init__(self, *applications):
+    super(VersionDispatch, self).__init__()
+    self.applications = applications
+  
+  def dispatch(self, request, response, error):
+    path = request.path
+    for application in self.applications:
+      if application.matches_version(path):
+        return application
+    error(404)
   

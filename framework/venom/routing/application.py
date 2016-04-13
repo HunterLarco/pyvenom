@@ -1,13 +1,51 @@
+# system imports
+from collections import defaultdict
+
 # package imports
 import routes
 from wsgi_entry import WSGIEntryPoint
 import Protocols
+from handlers import RequestHandler
 
 
 __all__ = ['Application']
 
 
-class _RoutesShortHand(object):
+def generate_meta_handler(app):
+  class MetaRouteHandler(RequestHandler):
+    def serve(self):
+      raw_path = self.path[len(app._meta_prefix):]
+      if raw_path.startswith('/'): raw_path = raw_path[1:]
+      path = '{}/{}'.format(app._api_prefix, raw_path)
+      meta = { 'meta': True, 'routes': [] }
+      for route in app.routes:
+        if route.matches_path(path):
+          meta['routes'].append({
+            'url': dict(route._url),
+            'query': dict(route._query),
+            'body': dict(route._body),
+            'methods': list(route.allowed_methods)
+          })
+      return meta
+  return MetaRouteHandler
+
+
+def generate_routes_handler(app):
+  class GetRoutesHandler(RequestHandler):
+    def serve(self):
+      routes = defaultdict(set)
+      for route in app.routes:
+        if not route.path.startswith('/api/'): continue
+        routes[route.path] = routes[route.path].union(route.allowed_methods)
+      for route, methods in routes.items():
+        routes[route] = list(methods)
+      return {
+        'routes': routes
+      }
+  return GetRoutesHandler
+
+
+class _RoutesShortHand(WSGIEntryPoint):
   def __init__(self, routes=None, protocol=Protocols.JSONProtocol):
     super(_RoutesShortHand, self).__init__()
     self.protocol = protocol
@@ -44,23 +82,25 @@ class _RoutesShortHand(object):
     return self._add_route(path, handler, protocol, routes.TRACE)
 
 
-class Application(WSGIEntryPoint, _RoutesShortHand):
+class Application(_RoutesShortHand):
   allowed_methods = routes.Route.allowed_methods
-  allowable_prefixes = frozenset(('api', 'meta', 'routes'))
+  internal_protocol = Protocols.JSONProtocol
   
-  def __init__(self, routes=None, version=1):
-    super(Application, self).__init__()
+  def __init__(self, routes=None, version=1, protocol=Protocols.JSONProtocol):
+    super(Application, self).__init__(protocol=protocol)
     self.routes = routes if routes else []
     self.version = version
     
     self._api_prefix = '/{}/v{}'.format('api', version)
-    self._meta_prefix = '/{}/v{}'.format('api', version)
-    self._routes_prefix = '/{}/v{}'.format('api', version)
+    self._meta_prefix = '/{}/v{}'.format('meta', version)
+    self._routes_prefix = '/{}/v{}'.format('routes', version)
+    
+    self._add_routes_route()
   
   def dispatch(self, request, response, error):
     route = self.find_route(request.path, request.method)
     if route == None:
-      error(400)
+      error(404)
       return
     route.handle(request, response, error)
   
@@ -70,4 +110,19 @@ class Application(WSGIEntryPoint, _RoutesShortHand):
         return route
     return None
   
+  def _add_route(self, path, handler, protocol, route_cls):
+    if path.startswith('/'): path = path[1:]
+    self._add_meta_route(path)
+    return self._add_api_route(path, handler, protocol, route_cls)
+  
+  def _add_api_route(self, path, handler, protocol, route_cls):
+    path = '{}/{}'.format(self._api_prefix, path)
+    return super(Application, self)._add_route(path, handler, protocol, route_cls)
+  
+  def _add_meta_route(self, path):
+    path = '{}/{}'.format(self._meta_prefix, path)
+    return super(Application, self)._add_route(path, generate_meta_handler(self), self.internal_protocol, routes.Route)
+  
+  def _add_routes_route(self):
+    return super(Application, self)._add_route(self._routes_prefix, generate_routes_handler(self), self.internal_protocol, routes.Route)
   

@@ -33,6 +33,16 @@ class smart_assert(object):
   def __init__(self, *args):
     self.args = args
   
+  def type(self, type_cls, message=None):
+    if message: assert self._type(type_cls), message
+    else: assert self._type(type_cls)
+  
+  def _type(self, type_cls):
+    for value in self.args:
+      if not isinstance(value, type_cls):
+        return False
+    return True
+  
   def equals(self, message=None):
     if message: assert self._equals(), message
     else: assert self._equals()
@@ -92,6 +102,16 @@ class RaiseContext():
     return self
   
   def __exit__(self, exception_type, exception_value, exception_traceback):
+    if self.exceptions:
+      return self._when_exception_required(exception_type)
+    return self._when_exception_not_required(exception_type)
+  
+  def _when_exception_not_required(self, exception_type):
+    if exception_type == None:
+      return False
+    assert False, 'Exception of type {} thrown when exceptions should not have been thrown'.format(exception_type)
+  
+  def _when_exception_required(self, exception_type):
     if exception_type == None:
       assert False, 'No exception thrown when expected from list {!r}'.format(self.exceptions)
     if not exception_type in self.exceptions:

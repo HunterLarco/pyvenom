@@ -39,9 +39,6 @@ class Property(object):
     
     self.is_queried = False
     self.search = False
-    
-  def _fix_up(self, name, instance):
-    self._name = name
   
   def to_ndb_property(self):
     raise NotImplementedError()
@@ -64,6 +61,8 @@ class Property(object):
     if instance == None:
       # called on a class
       return self
+    if not hasattr(instance, '_values'):
+      return self._hook_get(self.default)
     if not self._name in instance._values:
       return self._hook_get(self.default)
     return self._hook_get(instance._values[self._name])

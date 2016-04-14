@@ -4,8 +4,9 @@ __all__ = ['Parameters', 'Protocols']
 import Parameters
 import Protocols
 
-from model import *
-__all__ += model.__all__
+
+from wsgi_entry import *
+__all__ += wsgi_entry.__all__
 
 from routes import *
 __all__ += routes.__all__

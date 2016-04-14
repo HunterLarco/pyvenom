@@ -1,3 +1,7 @@
+# system imports
+import inspect
+
+
 __all__ = ['Model', 'ModelAttribute', 'Model']
 
 
@@ -8,7 +12,7 @@ class ModelAttribute(object):
     self._name = None
     self._entity = None
   
-  def _fix_up(self, entity=None, name=None, model=None):
+  def _connect(self, entity=None, name=None, model=None):
     if entity:
       self._entity = entity
       self._model = entity.__class__
@@ -18,17 +22,18 @@ class ModelAttribute(object):
       self._model = model
   
   @classmethod
-  def fix_up(cls, obj, entity=None, model=None):
+  def connect(cls, obj):
+    model, entity = (obj, None) if inspect.isclass(obj) else (None, obj)
     for key in dir(obj):
       value = getattr(obj, key)
       if isinstance(value, cls):
-        value._fix_up(entity=entity, model=model, name=key)
+        value._connect(entity=entity, model=model, name=key)
 
 
 class MetaModel(type):
   def __init__(cls, name, bases, classdict):
     super(MetaModel, cls).__init__(name, bases, classdict)
-    ModelAttribute.fix_up(cls, model=cls)
+    ModelAttribute.connect(cls)
 
 
 class Model(object):
@@ -36,5 +41,5 @@ class Model(object):
   
   def __init__(self):
     super(Model, self).__init__()
-    ModelAttribute.fix_up(self, entity=self)
+    ModelAttribute.connect(self)
     

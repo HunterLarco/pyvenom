@@ -33,6 +33,16 @@ class GroupsHandler(venom.RequestHandler):
     return { 'users': User.teenagers() }
 
 
-# class ProfileHandler(venom.RequestHandler):
-#   def put(self):
-#     pass
+class ProfileHandler(venom.RequestHandler):
+  def put(self):
+    user = self.url.get('user')
+    username, password, age = self.body.get('username', 'password', 'age')
+    if username: user.username = username
+    if password: user.password = password
+    if age: user.age = age
+    return user.save()
+
+
+class HelloWorldHandler(venom.RequestHandler):
+  def get(self):
+    return { 'message': 'Hello World!' }

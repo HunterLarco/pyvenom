@@ -2,7 +2,10 @@
 import re
 
 
-__all__ = ['Parameter']
+__all__ = [
+  'Parameter', 'ChoicesParameter', 'String', 'Integer',
+  'Float', 'Password', 'Dict', 'List', 'Model'
+]
 
 
 class ParameterValidationFailed(Exception):
@@ -293,3 +296,22 @@ class List(Parameter):
     if self.max == None: return
     if len(value) > self.max:
       raise ParameterValidationFailed('ListParameter value length was greater than max')
+
+
+class Model(Integer):
+  _attributes = Parameter._attributes
+  _arguments = Parameter._arguments + ['modelname']
+  
+  def __init__(self, model, required=True):
+    super(Model, self).__init__(required=required, min=0)
+    self.model = model
+    self.modelname = model.__name__
+  
+  def cast(self, value):
+    value = super(Model, self).cast(value)
+    return self.model.get(value)
+  
+  def validate(self, value):
+    super(Model, self).validate(value)
+    if not value:
+      raise Exception('Entity not found')

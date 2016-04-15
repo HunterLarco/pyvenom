@@ -18,24 +18,51 @@ class BasePropertyTest(BasicTestCase):
     with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
       prop != 1
     with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
-      prop.IN(1)
+      prop.contains(1)
     
     class TestProp(venom.Properties.Property):
-      allowed_operators = frozenset([venom.Properties.PropertyComparison.EQ])
+      allowed_operators = frozenset([
+        venom.Properties.PropertyComparison.EQ,
+        venom.Properties.PropertyComparison.NE
+      ])
+      
+      def query_uses_datastore(self, operator, value):
+        return operator == venom.Properties.PropertyComparison.EQ
+      
+      def to_search_field(self, operator, value):
+        return 'search'
+  
+      def to_datastore_property(self, operator, value):
+        return 'datastore'
     
     prop = TestProp()
     with smart_assert.raises() as context:
       prop == 1
+    with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
+      prop < 1
+    with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
+      prop <= 1
+    with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
+      prop > 1
+    with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
+      prop >= 1
+    with smart_assert.raises() as context:
+      prop != 1
+    with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
+      prop.contains(1)
   
-  def test_on_compare_method(self):
+  def test_comparisons_method(self):
     class TestProp(venom.Properties.Property):
       allowed_operators = venom.Properties.PropertyComparison.allowed_operators
       
-      def _on_compare(self, operator):
-        if operator == venom.Properties.PropertyComparison.EQ:
-          self.datastore = True
-        else:
-          self.search = True
+      def query_uses_datastore(self, operator, value):
+        return operator == venom.Properties.PropertyComparison.EQ
+      
+      def to_search_field(self, operator, value):
+        return 'search'
+  
+      def to_datastore_property(self, operator, value):
+        return 'datastore'
     
     prop = TestProp()
     with smart_assert.raises() as context:
@@ -44,43 +71,16 @@ class BasePropertyTest(BasicTestCase):
     assert prop.search == False
     assert prop.datastore == True
     assert prop.compared == True
+    assert prop.search_fields == set()
+    assert prop.datastore_properties == set(['datastore'])
     
     prop < 4
     
     assert prop.search == True
     assert prop.datastore == True
     assert prop.compared == True
-  
-  def test_enforces_list(self):
-    class TestProp(venom.Properties.Property):
-      allowed_operators = venom.Properties.PropertyComparison.allowed_operators
-      
-      def to_search_fields(self):
-        return 123
-      
-      def to_datastore_properties(self):
-        return 456
-    
-    prop = TestProp()
-    smart_assert(prop._to_search_fields()).type(list,
-      message='prop._to_search_fields() must return a list')
-    smart_assert(prop._to_datastore_properties()).type(list,
-      message='prop._to_datastore_properties() must return a list')
-    
-    class TestProp2(venom.Properties.Property):
-      allowed_operators = venom.Properties.PropertyComparison.allowed_operators
-      
-      def to_search_fields(self):
-        return [123]
-      
-      def to_datastore_properties(self):
-        return [456]
-    
-    prop = TestProp2()
-    smart_assert(prop._to_search_fields()).type(list,
-      message='prop._to_search_fields() must return a list')
-    smart_assert(prop._to_datastore_properties()).type(list,
-      message='prop._to_datastore_properties() must return a list')
+    assert prop.search_fields == set(['search'])
+    assert prop.datastore_properties == set(['datastore'])
   
   def test_base_validatation(self):
     class TestProp(venom.Properties.Property):

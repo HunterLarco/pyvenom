@@ -1,12 +1,13 @@
 # package imports
 from model import ModelAttribute
+from query import QueryComponent, QueryParameter
 
 
 __all__  = ['Property', 'PropertyComparison']
 __all__ += ['InvalidPropertyComparison']
 
 
-class PropertyComparison(object):
+class PropertyComparison(QueryComponent):
   EQ = '='
   NE = '!='
   LT = '<'
@@ -24,6 +25,41 @@ class PropertyComparison(object):
     self.property = property
     self.operator = operator
     self.value = value
+  
+  """ [below] Implemented from QueryComponent """
+  
+  def uses_datastore(self):
+    return self.property.query_uses_datastore(self.operator, self.value)
+  
+  def get_property_comparisons(self):
+    return [self]
+  
+  def to_datastore_query(self, args, kwargs):
+    prop = self.property.to_datastore_property(self.operator, self.value)
+    value = self.value
+    if isinstance(self.value, QueryParameter):
+      value = self.value.get_value(args, kwargs)
+    if   self.operator == self.EQ: return prop == value
+    elif self.operator == self.NE: return prop != value
+    elif self.operator == self.LT: return prop < value
+    elif self.operator == self.LE: return prop <= value
+    elif self.operator == self.GT: return prop > value
+    elif self.operator == self.GE: return prop >= value
+    elif self.operator == self.IN: return prop.IN(value)
+    else: raise Exception('Unknown operator')
+  
+  def to_search_api_query(self, args, kwargs):
+    prop = self.property.to_search_field(self.operator, self.value)
+    value = self.value
+    if isinstance(self.value, QueryParameter):
+      value = self.value.get_value(args, kwargs)
+    if isinstance(value, str):
+      value = '{}'.format(value.replace('"', '\\"'))
+    if self.operator == self.NE:
+      return '(NOT {} = {})'.format(self.property._name, value)
+    return '{} {} {}'.format(self.property._name, self.operator, value)
+  
+  """ [end] QueryComponent implementation """
 
 
 class InvalidPropertyComparison(Exception):
@@ -45,6 +81,9 @@ class Property(ModelAttribute):
     self.datastore = False
     self.compared = False
     
+    self.search_fields = set()
+    self.datastore_properties = set()
+    
     self._values = {}
   
   def _connect(self, entity=None, name=None, model=None):
@@ -62,16 +101,10 @@ class Property(ModelAttribute):
       return [value]
     return value
   
-  def _to_search_fields(self):
-    return self._force_list(self.to_search_fields())
-  
-  def to_search_fields(self):
+  def to_search_field(self, operator, value):
     raise NotImplementedError()
   
-  def _to_datastore_properties(self):
-    return self._force_list(self.to_datastore_properties())
-  
-  def to_datastore_properties(self):
+  def to_datastore_property(self, operator, value):
     raise NotImplementedError()
   
   def __get__(self, instance, cls):
@@ -95,16 +128,24 @@ class Property(ModelAttribute):
   def _get_stored_value(self, entity):
     return entity._values[self._name]
   
-  def _on_compare(self, operator):
-    # hook for subclasses to react when
-    # a comparison is executed
-    pass
+  def query_uses_datastore(self, operator, value):
+    raise NotImplementedError()
   
   def _handle_comparison(self, operator, value):
     if not operator in self.allowed_operators:
       raise InvalidPropertyComparison('Property does not support {} comparisons'.format(operator))
     self.compared = True
-    self._on_compare(operator)
+    
+    uses_datastore = self.query_uses_datastore(operator, value)
+    if uses_datastore:
+      self.datastore = True
+      datastore_property = self.to_datastore_property(operator, value)
+      self.datastore_properties.add(datastore_property)
+    else:
+      self.search = True
+      search_field = self.to_search_field(operator, value)
+      self.search_fields.add(search_field)
+    
     return PropertyComparison(self, operator, value)
   
   def __eq__(self, value):
@@ -125,5 +166,5 @@ class Property(ModelAttribute):
   def __ge__(self, value):
     return self._handle_comparison(PropertyComparison.GE, value)
   
-  def IN(self, value):
+  def contains(self, value):
     return self._handle_comparison(PropertyComparison.IN, value)

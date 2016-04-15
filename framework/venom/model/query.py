@@ -5,28 +5,28 @@ __all__ = [
 
 
 class QueryParameter(object):
-  def __init__(self, name=None):
-    self.name = name
+  def __init__(self, key=None):
+    self.key = key
   
   def get_value(self, args, kwargs):
-    if self.name == None:
+    if self.key == None:
       return self._get_value_from_args(args)
     return self._get_value_from_kwargs(kwargs)
   
   def _get_value_from_args(self, args):
     if len(args) == 0:
-      raise Exception('Not enough arguments for Query to execute')
+      raise IndexError('Not enough arguments for Query to execute')
     
     value = args[0]
     del args[0]
     return value
   
   def _get_value_from_kwargs(self, kwargs):
-    if not self.name in kwargs:
-      raise Exception('Parameter keyword "{}" not found'.format(self.name))
+    if not self.key in kwargs:
+      raise KeyError('Parameter keyword "{}" not found in {}'.format(self.key, kwargs))
     
-    value = kwargs[self.name]
-    del kwargs[self.name]
+    value = kwargs[self.key]
+    del kwargs[self.key]
     return value
   
 QP = QueryParameter

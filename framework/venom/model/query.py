@@ -1,3 +1,10 @@
+# app engine imports
+from google.appengine.ext import ndb
+
+# package imports
+from model import ModelAttribute
+
+
 __all__ = [
   'QueryParameter', 'QueryComponent', 'QueryLogicalOperator',
   'AND', 'OR', 'QueryResults', 'Query'
@@ -55,20 +62,71 @@ class QueryComponent(object):
 
 
 class QueryLogicalOperator(QueryComponent):
-  pass
+  datastore_conjuntion = None
+  search_conjunction = None
+  
+  def __init__(self, *components):
+    self.components = components
+  
+  """ [below] Implemented from QueryComponent """
+  
+  def uses_datastore(self):
+    """ If a single component uses the search api
+        so must this function """
+    for component in self.components:
+      if not component.uses_datastore():
+        return False
+    return True
+  
+  def get_property_comparisons(self):
+    property_comparisons = []
+    for component in self.components:
+      property_comparisons.extend(component.get_property_comparisons())
+    return property_comparisons
+  
+  def to_datastore_query(self, args, kwargs):
+    if self.datastore_conjuntion == None:
+      raise ValueError('self.datastore_conjuntion cannot be None')
+    return self.datastore_conjuntion(
+      *map(lambda component: component.to_datastore_query(args, kwargs), self.components))
+  
+  def to_search_query(self, args, kwargs):
+    if self.datastore_conjuntion == None:
+      raise ValueError('self.search_conjunction cannot be None')
+    query_strings = map(lambda component: component.to_search_query(args, kwargs), self.components)
+    query_string = ' {} '.format(self.search_conjunction).join(query_strings)
+    return '({})'.format(query_string)
+  
+  """ [end] QueryComponent implementation """
 
 
 class AND(QueryLogicalOperator):
-  pass
+  datastore_conjuntion = ndb.AND
+  search_conjunction = 'AND'
 
 
 class OR(QueryLogicalOperator):
-  pass
+  datastore_conjuntion = ndb.OR
+  search_conjunction = 'OR'
 
 
 class QueryResults(list):
   pass
 
 
-class Query(QueryComponent):
-  pass
+class Query(ModelAttribute, QueryComponent):
+  """ [below] Implemented from QueryComponent """
+  
+  def uses_datastore(self):
+    pass
+  
+  def get_property_comparisons(self):
+    pass
+  
+  def to_datastore_query(self, args, kwargs):
+    pass
+  
+  def to_search_query(self, args, kwargs):
+    pass
+  
+  """ [end] QueryComponent implementation """

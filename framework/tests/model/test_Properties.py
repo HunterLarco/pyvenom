@@ -1,3 +1,5 @@
+from google.appengine.ext import ndb
+from google.appengine.api import search
 from helper import smart_assert, BasicTestCase
 import venom
 
@@ -126,10 +128,10 @@ class PropComparisonTestProp(venom.Properties.Property):
     return operator == venom.Properties.PropertyComparison.EQ
   
   def to_search_field(self, operator, value):
-    return 'search'
+    return search.TextField
 
   def to_datastore_property(self, operator, value):
-    return 'datastore'
+    return ndb.StringProperty
 
 
 class PropertyComparisonTest(BasicTestCase):
@@ -161,10 +163,29 @@ class PropertyComparisonTest(BasicTestCase):
     assert comparison.to_search_query([], { 'bar': 'foo' }) == 'prop = "foo"'
   
   def test_datastore_query_without_query_parameter(self):
-    assert False, 'TODO: Write this test'
+    prop = PropComparisonTestProp()
+    prop._connect(name='prop')
+    comparison = prop == '123'
+    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '=', '123')"
+    comparison = prop < '123'
+    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '<', '123')"
+    comparison = prop <= '123'
+    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '<=', '123')"
+    comparison = prop > '123'
+    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '>', '123')"
+    comparison = prop >= '123'
+    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '>=', '123')"
+    comparison = prop != '123'
+    assert str(comparison.to_datastore_query([], {})) == "OR(FilterNode('prop', '<', '123'), FilterNode('prop', '>', '123'))"
   
   def test_datastore_query_with_query_parameter(self):
-    assert False, 'TODO: Write this test'
+    prop = PropComparisonTestProp()
+    prop._connect(name='prop')
+    comparison = prop == venom.QueryParameter()
+    assert str(comparison.to_datastore_query(['foo'], {})) == "FilterNode('prop', '=', 'foo')"
+    assert str(comparison.to_datastore_query(['bar'], {})) == "FilterNode('prop', '=', 'bar')"
+    comparison = prop == venom.QueryParameter('bar')
+    assert str(comparison.to_datastore_query([], { 'bar': 'foo' })) == "FilterNode('prop', '=', 'foo')"
   
   def test_uses_datastore(self):
     prop = PropComparisonTestProp()

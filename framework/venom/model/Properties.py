@@ -35,7 +35,8 @@ class PropertyComparison(QueryComponent):
     return [self]
   
   def to_datastore_query(self, args, kwargs):
-    prop = self.property.to_datastore_property(self.operator, self.value)
+    prop_cls = self.property.to_datastore_property(self.operator, self.value)
+    prop = prop_cls(indexed=True, name=self.property._name)
     value = self.value
     if isinstance(self.value, QueryParameter):
       value = self.value.get_value(args, kwargs)

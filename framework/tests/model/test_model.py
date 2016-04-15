@@ -33,5 +33,19 @@ class ModelTest(BasicTestCase):
     smart_assert(test, Test.foo._entity).equals('[fail] prop._entity == parent_entity')
     smart_assert(test, Test.bar._entity).equals('[fail] prop._entity == parent_entity')
   
+  def test_property_setter_getter(self):
+    class Test(venom.Model):
+      foo = venom.Properties.Property()
+      bar = venom.Properties.Property()
+    
+    test = Test()
+    test.foo = 123
+    assert test.foo == 123
+    test.bar = 456
+    test.foo = 789
+    assert test.bar == 456
+    assert test.foo == 789
+    
+  
   
   

@@ -23,17 +23,20 @@ class ModelAttribute(object):
   
   @classmethod
   def connect(cls, obj):
+    results = {}
     model, entity = (obj, None) if inspect.isclass(obj) else (None, obj)
     for key in dir(obj):
       value = getattr(obj, key)
       if isinstance(value, cls):
         value._connect(entity=entity, model=model, name=key)
+        results[key] = value
+    return results
 
 
 class MetaModel(type):
   def __init__(cls, name, bases, classdict):
     super(MetaModel, cls).__init__(name, bases, classdict)
-    ModelAttribute.connect(cls)
+    cls._properties = ModelAttribute.connect(cls)
 
 
 class Model(object):
@@ -41,5 +44,9 @@ class Model(object):
   
   def __init__(self):
     super(Model, self).__init__()
-    ModelAttribute.connect(self)
+    self._connect_properties()
+  
+  def _connect_properties(self):
+    for _, prop in self._properties.items():
+      prop._connect(entity=self)
     

@@ -46,7 +46,12 @@ class Property(ModelAttribute):
     self.compared = False
     
     self._values = {}
-    
+  
+  def _connect(self, entity=None, name=None, model=None):
+    super(Property, self)._connect(entity=entity, name=name, model=model)
+    if entity and not hasattr(entity, '_values'):
+      setattr(entity, '_values', {})
+  
   def validate(self, value):
     if self.required and value == None:
       raise PropertyValidationFailed('Required property was None')
@@ -69,17 +74,26 @@ class Property(ModelAttribute):
   def to_datastore_properties(self):
     raise NotImplementedError()
   
+  def __get__(self, instance, cls):
+    if instance == None:
+      # called on a class
+      return self
+    return self._get_value(instance)
+
+  def __set__(self, instance, value):
+    return self._set_value(instance, value)
+  
   def _set_value(self, entity, value):
-    self._values[id(entity)] = value
+    entity._values[self._name] = value
   
   def _get_value(self, entity):
-    return self._values[id(entity)]
+    return entity._values[self._name]
   
   def _set_stored_value(self, entity, value):
-    self._values[id(entity)] = value
+    entity._values[self._name] = value
   
   def _get_stored_value(self, entity):
-    return self._values[id(entity)]
+    return entity._values[self._name]
   
   def _on_compare(self, operator):
     # hook for subclasses to react when

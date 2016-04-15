@@ -105,8 +105,12 @@ class BasePropertyTest(BasicTestCase):
       def _get_stored_value(self, entity):
         return super(TestProp, self)._get_stored_value(entity) * 2
     
-    entity = {}
+    class ModelStub(object):
+      pass
+    entity = ModelStub()
+    
     prop = TestProp()
+    prop._connect(entity=entity)
     prop._set_value(entity, 123)
     assert prop._get_value(entity) == 123
     assert prop._get_stored_value(entity) == 246

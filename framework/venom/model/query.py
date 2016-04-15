@@ -50,7 +50,7 @@ class QueryComponent(object):
   def to_datastore_query(self, args, kwargs):
     raise NotImplementedError()
   
-  def to_search_api_query(self, args, kwargs):
+  def to_search_query(self, args, kwargs):
     raise NotImplementedError()
 
 

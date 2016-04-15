@@ -51,7 +51,7 @@ class BasePropertyTest(BasicTestCase):
     with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
       prop.contains(1)
   
-  def test_comparisons_method(self):
+  def test_uses_datastore_method(self):
     class TestProp(venom.Properties.Property):
       allowed_operators = venom.Properties.PropertyComparison.allowed_operators
       
@@ -117,3 +117,59 @@ class BasePropertyTest(BasicTestCase):
     prop._set_stored_value(entity, 468)
     assert prop._get_value(entity) == 234
     assert prop._get_stored_value(entity) == 468
+
+
+class PropComparisonTestProp(venom.Properties.Property):
+  allowed_operators = venom.Properties.PropertyComparison.allowed_operators
+  
+  def query_uses_datastore(self, operator, value):
+    return operator == venom.Properties.PropertyComparison.EQ
+  
+  def to_search_field(self, operator, value):
+    return 'search'
+
+  def to_datastore_property(self, operator, value):
+    return 'datastore'
+
+
+class PropertyComparisonTest(BasicTestCase):
+  def test_search_query_without_query_parameter(self):
+    prop = PropComparisonTestProp()
+    prop._connect(name='prop')
+    comparison = prop == 123
+    assert comparison.to_search_query([], {}) == 'prop = 123'
+    comparison = prop < 123
+    assert comparison.to_search_query([], {}) == 'prop < 123'
+    comparison = prop <= 123
+    assert comparison.to_search_query([], {}) == 'prop <= 123'
+    comparison = prop > 123
+    assert comparison.to_search_query([], {}) == 'prop > 123'
+    comparison = prop >= 123
+    assert comparison.to_search_query([], {}) == 'prop >= 123'
+    comparison = prop != 123
+    assert comparison.to_search_query([], {}) == '(NOT prop = 123)'
+    comparison = prop == 'bar = "foo"'
+    assert comparison.to_search_query([], {}) == 'prop = "bar = \\"foo\\""'
+  
+  def test_search_query_with_query_parameter(self):
+    prop = PropComparisonTestProp()
+    prop._connect(name='prop')
+    comparison = prop == venom.QueryParameter()
+    assert comparison.to_search_query(['foo'], {}) == 'prop = "foo"'
+    assert comparison.to_search_query([123], {}) == 'prop = 123'
+    comparison = prop == venom.QueryParameter('bar')
+    assert comparison.to_search_query([], { 'bar': 'foo' }) == 'prop = "foo"'
+  
+  def test_datastore_query_without_query_parameter(self):
+    assert False, 'TODO: Write this test'
+  
+  def test_datastore_query_with_query_parameter(self):
+    assert False, 'TODO: Write this test'
+  
+  def test_uses_datastore(self):
+    prop = PropComparisonTestProp()
+    prop._connect(name='prop')
+    comparison = prop == venom.QueryParameter()
+    assert comparison.uses_datastore()
+    comparison = prop < venom.QueryParameter()
+    assert not comparison.uses_datastore()

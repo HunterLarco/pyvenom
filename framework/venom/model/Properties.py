@@ -48,13 +48,12 @@ class PropertyComparison(QueryComponent):
     elif self.operator == self.IN: return prop.IN(value)
     else: raise Exception('Unknown operator')
   
-  def to_search_api_query(self, args, kwargs):
-    prop = self.property.to_search_field(self.operator, self.value)
+  def to_search_query(self, args, kwargs):
     value = self.value
     if isinstance(self.value, QueryParameter):
       value = self.value.get_value(args, kwargs)
     if isinstance(value, str):
-      value = '{}'.format(value.replace('"', '\\"'))
+      value = '"{}"'.format(value.replace('"', '\\"'))
     if self.operator == self.NE:
       return '(NOT {} = {})'.format(self.property._name, value)
     return '{} {} {}'.format(self.property._name, self.operator, value)

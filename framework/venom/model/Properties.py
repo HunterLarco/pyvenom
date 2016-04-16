@@ -4,7 +4,7 @@ from query import QueryComponent, QueryParameter
 
 
 __all__  = ['Property', 'PropertyComparison']
-__all__ += ['InvalidPropertyComparison']
+__all__ += ['InvalidPropertyComparison', 'PropertyValidationFailed']
 
 
 class PropertyComparison(QueryComponent):

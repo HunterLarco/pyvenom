@@ -6,11 +6,9 @@ __all__ = ['Model', 'ModelAttribute', 'Model']
 
 
 class ModelAttribute(object):
-  def __init__(self):
-    super(ModelAttribute, self).__init__()
-    self._model = None
-    self._name = None
-    self._entity = None
+  _model = None
+  _name = None
+  _entity = None
   
   def _connect(self, entity=None, name=None, model=None):
     if entity:
@@ -49,4 +47,9 @@ class Model(object):
   def _connect_properties(self):
     for _, prop in self._properties.items():
       prop._connect(entity=self)
-    
+  
+  def _execute_datastore_query(self, query):
+    return []
+  
+  def _execute_search_query(self, query):
+    return []

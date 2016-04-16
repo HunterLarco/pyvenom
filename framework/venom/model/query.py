@@ -3,6 +3,7 @@ from google.appengine.ext import ndb
 
 # package imports
 from model import ModelAttribute
+# Query._uses_illegal_query contains an import too
 
 
 __all__ = [
@@ -114,19 +115,34 @@ class QueryResults(list):
   pass
 
 
-class Query(ModelAttribute, QueryComponent):
+class Query(AND, ModelAttribute):
+  def __init__(self, *components):
+    super(Query, self).__init__(*components)
+  
   """ [below] Implemented from QueryComponent """
   
   def uses_datastore(self):
-    pass
-  
-  def get_property_comparisons(self):
-    pass
-  
-  def to_datastore_query(self, args, kwargs):
-    pass
-  
-  def to_search_query(self, args, kwargs):
-    pass
+    return super(Query, self).uses_datastore() and not self._uses_illegal_query()
   
   """ [end] QueryComponent implementation """
+  
+  def _uses_illegal_query(self):
+    # places here to avoid circular imports
+    from Properties import PropertyComparison
+    inequalities = set()
+    for comparison in self.get_property_comparisons():
+      if comparison.operator != PropertyComparison.EQ:
+        inequalities.add(comparison.property)
+        if len(inequalities) > 1:
+          return True
+    return False
+  
+  def __call__(self, *args, **kwargs):
+    if self.uses_datastore():
+      query = self.to_datastore_query(args, kwargs)
+      results = self._entity._execute_datastore_query(query)
+      return QueryResults(results)
+    else:
+      query = self.to_search_query(args, kwargs)
+      results = self._entity._execute_search_query(query)
+      return QueryResults(results)

@@ -115,3 +115,71 @@ class QueryLogicalOperatorTest(BasicTestCase):
     combined_operator = venom.AND(and_operator, or_operator)
     assert str(combined_operator.to_datastore_query([], {})) == "OR(AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('foo', '>', 1)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('bar', '<', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('bar', '>', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18), FilterNode('foo', '>', 1)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18), FilterNode('bar', '<', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18), FilterNode('bar', '>', 18)))"
     
+    
+class QueryTestProp(venom.Properties.Property):
+  allowed_operators = venom.Properties.PropertyComparison.allowed_operators
+
+  def query_uses_datastore(self, operator, value):
+    return True
+
+  def to_search_field(self, operator, value):
+    return search.NumberField
+
+  def to_datastore_property(self, operator, value):
+    return ndb.IntegerProperty
+    
+
+class QueryTest(BasicTestCase):
+  def test_query_inheritance(self):
+    foo = QueryTestProp()
+    foo._connect(name='foo')
+    bar = QueryTestProp()
+    bar._connect(name='bar')
+    
+    query = venom.Query(foo == 123, bar == 456)
+    query._connect(name='query')
+    
+    assert query.to_search_query([], {}) == '(foo = 123 AND bar = 456)'
+    assert query._name == 'query'
+    assert query._model == None
+    assert query._entity == None
+  
+  def test_uses_datastore(self):
+    foo = QueryTestProp()
+    foo._connect(name='foo')
+    bar = QueryTestProp()
+    bar._connect(name='bar')
+    
+    query = venom.Query(foo == 123, bar == 456)
+    query._connect(name='query')
+    assert query.uses_datastore()
+    
+    query = venom.Query(foo == 123, bar != 456)
+    query._connect(name='query')
+    assert query.uses_datastore()
+    
+    query = venom.Query(foo > 123, bar != 456)
+    query._connect(name='query')
+    assert not query.uses_datastore()
+    
+    query = venom.Query(foo > 123, foo != 456)
+    query._connect(name='query')
+    assert query.uses_datastore()
+    
+  def test_callable(self):
+    class TestModel(venom.Model):
+      pass
+    
+    foo = QueryTestProp()
+    foo._connect(name='foo')
+    bar = QueryTestProp()
+    bar._connect(name='bar')
+    
+    query = venom.Query(foo == 123, bar == 456)
+    query._connect(name='query', entity=TestModel())
+    assert query(1, 2, 3, four=4) == []
+    
+    query = venom.Query(foo < 123, bar != 456)
+    query._connect(name='query', entity=TestModel())
+    assert query(1, 2, 3, four=4) == []
+    

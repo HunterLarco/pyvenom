@@ -3,7 +3,6 @@ from google.appengine.ext import ndb
 
 # package imports
 from model import ModelAttribute
-# Query._uses_illegal_query contains an import too
 
 
 __all__ = [
@@ -60,6 +59,61 @@ class QueryComponent(object):
   
   def to_search_query(self, args, kwargs):
     raise NotImplementedError()
+
+
+class PropertyComparison(QueryComponent):
+  EQ = '='
+  NE = '!='
+  LT = '<'
+  LE = '<='
+  GT = '>'
+  GE = '>='
+  IN = 'in'
+  
+  allowed_operators = frozenset((EQ, NE, LT, LE, GT, GE, IN))
+  
+  def __init__(self, property, operator, value):
+    if not operator in self.allowed_operators:
+      raise Exception('Unknown operator "{}"'.format(operator))
+    
+    self.property = property
+    self.operator = operator
+    self.value = value
+  
+  """ [below] Implemented from QueryComponent """
+  
+  def uses_datastore(self):
+    return self.property.query_uses_datastore(self.operator, self.value)
+  
+  def get_property_comparisons(self):
+    return [self]
+  
+  def to_datastore_query(self, args, kwargs):
+    prop_cls = self.property.to_datastore_property(self.operator, self.value)
+    prop = prop_cls(indexed=True, name=self.property._name)
+    value = self.value
+    if isinstance(self.value, QueryParameter):
+      value = self.value.get_value(args, kwargs)
+    if   self.operator == self.EQ: return prop == value
+    elif self.operator == self.NE: return prop != value
+    elif self.operator == self.LT: return prop < value
+    elif self.operator == self.LE: return prop <= value
+    elif self.operator == self.GT: return prop > value
+    elif self.operator == self.GE: return prop >= value
+    elif self.operator == self.IN: return prop.IN(value)
+    else: raise Exception('Unknown operator')
+  
+  def to_search_query(self, args, kwargs):
+    value = self.value
+    if isinstance(self.value, QueryParameter):
+      value = self.value.get_value(args, kwargs)
+    if isinstance(value, str):
+      value = '"{}"'.format(value.replace('"', '\\"'))
+    if self.operator == self.NE:
+      return '(NOT {} = {})'.format(self.property._name, value)
+    return '{} {} {}'.format(self.property._name, self.operator, value)
+  
+  """ [end] QueryComponent implementation """
 
 
 class QueryLogicalOperator(QueryComponent):
@@ -127,8 +181,6 @@ class Query(AND, ModelAttribute):
   """ [end] QueryComponent implementation """
   
   def _uses_illegal_query(self):
-    # places here to avoid circular imports
-    from Properties import PropertyComparison
     inequalities = set()
     for comparison in self.get_property_comparisons():
       if comparison.operator != PropertyComparison.EQ:

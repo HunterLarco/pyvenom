@@ -1,6 +1,6 @@
 {
   "name": "pyvenom",
   "scripts": {
-    "vendor:install": "pip install -t vendor -r requirements.txt"
+    "vendor:install": "pip install -t vendor -r vendor/requirements.txt"
   }
 }

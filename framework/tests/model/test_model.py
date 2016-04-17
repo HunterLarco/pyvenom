@@ -45,7 +45,32 @@ class ModelTest(BasicTestCase):
     test.foo = 789
     assert test.bar == 456
     assert test.foo == 789
+  
+  def test_populate_vs_from_stored(self):
+    class TestProp(venom.Properties.Property):
+      def _set_stored_value(self, entity, value):
+        super(TestProp, self)._set_stored_value(entity, value // 2)
+  
+      def _get_stored_value(self, entity):
+        return super(TestProp, self)._get_stored_value(entity) * 2
     
+    class Test(venom.Model):
+      foo = TestProp()
+      bar = TestProp()
+    
+    test = Test(foo=123, bar=456)
+    assert test.foo == 123
+    assert test.bar == 456
+    
+    test = Test()
+    test.populate(foo=123, bar=456)
+    assert test.foo == 123
+    assert test.bar == 456
+    
+    test = Test()
+    test._populate_from_stored(foo=10, bar=26)
+    assert test.foo == 5
+    assert test.bar == 13
   
   
   

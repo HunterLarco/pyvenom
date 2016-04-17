@@ -40,9 +40,10 @@ class MetaModel(type):
 class Model(object):
   __metaclass__ = MetaModel
   
-  def __init__(self):
+  def __init__(self, **kwargs):
     super(Model, self).__init__()
     self._connect_properties()
+    self.populate(**kwargs)
   
   def _connect_properties(self):
     for _, prop in self._properties.items():
@@ -53,3 +54,16 @@ class Model(object):
   
   def _execute_search_query(self, query):
     return []
+  
+  def populate(self, **kwargs):
+    for key, value in kwargs.items():
+      if key in self._properties:
+        setattr(self, key, value)
+  
+  def _populate_from_stored(self, **kwargs):
+    for key, value in kwargs.items():
+      if key in self._properties:
+        prop = self._properties[key]
+        prop._set_stored_value(self, value)
+  
+  

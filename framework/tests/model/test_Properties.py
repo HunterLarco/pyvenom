@@ -63,7 +63,7 @@ class BasePropertyTest(BasicTestCase):
       def to_search_field(self, operator, value):
         return 'search'
   
-      def to_datastore_property(self, operator, value):
+      def to_datastore_property(self):
         return 'datastore'
     
     prop = TestProp()
@@ -74,7 +74,8 @@ class BasePropertyTest(BasicTestCase):
     assert prop.datastore == True
     assert prop.compared == True
     assert prop.search_fields == set()
-    assert prop.datastore_properties == set(['datastore'])
+    
+    # TODO test prop.to_datastore_property()
     
     prop < 4
     
@@ -82,7 +83,8 @@ class BasePropertyTest(BasicTestCase):
     assert prop.datastore == True
     assert prop.compared == True
     assert prop.search_fields == set(['search'])
-    assert prop.datastore_properties == set(['datastore'])
+    
+    # TODO test prop.to_datastore_property()
   
   def test_base_validatation(self):
     class TestProp(venom.Properties.Property):
@@ -130,7 +132,7 @@ class PropComparisonTestProp(venom.Properties.Property):
   def to_search_field(self, operator, value):
     return search.TextField
 
-  def to_datastore_property(self, operator, value):
+  def to_datastore_property(self):
     return ndb.StringProperty
 
 

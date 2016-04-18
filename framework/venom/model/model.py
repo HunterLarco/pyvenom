@@ -83,7 +83,6 @@ class Model(object):
       if prop.search:
         for field in prop.search_fields:
           self.hybrid_entity.set(key, value, field)
-      if prop.datastore:
-        for property in prop.datastore_properties:
-          self.hybrid_entity.set(key, value, property)
+      property = prop.to_datastore_property()
+      self.hybrid_entity.set(key, value, property)
     self.hybrid_entity.put()

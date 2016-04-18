@@ -40,7 +40,7 @@ class PropComparisonTestProp(venom.Properties.Property):
   def to_search_field(self, operator, value):
     return search.NumberField
 
-  def to_datastore_property(self, operator, value):
+  def to_datastore_property(self):
     return ndb.IntegerProperty
 
 
@@ -125,7 +125,7 @@ class QueryTestProp(venom.Properties.Property):
   def to_search_field(self, operator, value):
     return search.NumberField
 
-  def to_datastore_property(self, operator, value):
+  def to_datastore_property(self):
     return ndb.IntegerProperty
     
 

@@ -1,3 +1,6 @@
+# app engine imports
+from google.appengine.ext import ndb
+
 # package imports
 from attribute import ModelAttribute
 from query import PropertyComparison
@@ -27,7 +30,6 @@ class Property(ModelAttribute):
     self.compared = False
     
     self.search_fields = set()
-    self.datastore_properties = set()
     
     self._values = {}
   
@@ -49,7 +51,14 @@ class Property(ModelAttribute):
   def to_search_field(self, operator, value):
     raise NotImplementedError()
   
-  def to_datastore_property(self, operator, value):
+  def _to_datastore_property(self):
+    prop = self.to_datastore_property()
+    if issubclass(prop, ndb.Property):
+      prop = prop()
+    prop._indexed = self.datastore
+    return prop
+  
+  def to_datastore_property(self):
     raise NotImplementedError()
   
   def __get__(self, instance, cls):
@@ -90,8 +99,6 @@ class Property(ModelAttribute):
     uses_datastore = self.query_uses_datastore(operator, value)
     if uses_datastore:
       self.datastore = True
-      datastore_property = self.to_datastore_property(operator, value)
-      self.datastore_properties.add(datastore_property)
     else:
       self.search = True
       search_field = self.to_search_field(operator, value)

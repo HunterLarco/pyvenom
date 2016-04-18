@@ -78,18 +78,13 @@ class ModelTest(BasicTestCase):
     class TestProp(venom.Properties.Property):
       allowed_operators = venom.Properties.PropertyComparison.allowed_operators
       
-      def __init__(self, required=False):
-        super(TestProp, self).__init__(required=required)
-        self.datastore_properties.add(ndb.IntegerProperty(indexed=False))
-        self.datastore = True
-      
       def _to_storage(self, value):
         return value * 2
   
       def _from_storage(self, value):
         return value // 2
       
-      def to_datastore_property(self, operator, value):
+      def to_datastore_property(self):
         return ndb.IntegerProperty
       
       def query_uses_datastore(self, operator, value):
@@ -129,3 +124,7 @@ class ModelTest(BasicTestCase):
     
     entities = Test.foo34()
     assert len(entities) == 1
+    
+    entity = entities[0]
+    assert entity.foo == 34
+    assert entity.bar == 24

@@ -48,12 +48,15 @@ class Parameter(object):
   def __iter__(self):
     cls = self.__class__
     yield 'type', cls.__name__
-    
+  
     args = self._get_arguments_dict()
     for key, value in args.items():
       yield key, value
-    
+  
     yield 'attributes', self._get_attributes_dict()
+  
+  def __json__(self):
+    return dict(self)
   
   def _get_attributes_dict(self):
     """

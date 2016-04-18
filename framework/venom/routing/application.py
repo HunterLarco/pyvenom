@@ -14,6 +14,14 @@ __all__ = ['Application', 'VersionDispatch']
 
 def generate_meta_handler(app):
   class MetaRouteHandler(RequestHandler):
+    def _removenull(self, obj):
+      for key, value in obj.items():
+        if value == None:
+          del obj[key]
+        if isinstance(value, dict):
+          self._removenull(value)
+      return obj
+    
     def serve(self):
       raw_path = self.path[len(app._meta_prefix):]
       if raw_path.startswith('/'): raw_path = raw_path[1:]
@@ -22,12 +30,13 @@ def generate_meta_handler(app):
       for route in app.routes:
         if route.matches_path(path):
           meta['routes'].append({
-            'headers': dict(route._headers),
-            'url': dict(route._url),
-            'query': dict(route._query),
-            'body': dict(route._body),
+            'headers': self._removenull(dict(route._headers)['template']),
+            'url': self._removenull(dict(route._url)['template']),
+            'query': self._removenull(dict(route._query)['template']),
+            'body': self._removenull(dict(route._body)),
             'methods': list(route.allowed_methods),
-            'ui.guid': ui.get_guid(route)
+            'ui.guid': ui.get_guid(route),
+            'path': route.path
           })
       return meta
   return MetaRouteHandler

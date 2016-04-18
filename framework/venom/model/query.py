@@ -6,7 +6,7 @@ from attribute import ModelAttribute
 
 
 __all__ = [
-  'QueryParameter', 'QueryComponent', 'QueryLogicalOperator',
+  'QueryParameter', 'QP', 'QueryComponent', 'QueryLogicalOperator',
   'AND', 'OR', 'QueryResults', 'Query'
 ]
 

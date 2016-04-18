@@ -1,5 +1,5 @@
 # package imports
-from model import ModelAttribute
+from attribute import ModelAttribute
 from query import PropertyComparison
 
 
@@ -68,10 +68,16 @@ class Property(ModelAttribute):
     return entity._values[self._name]
   
   def _set_stored_value(self, entity, value):
-    entity._values[self._name] = value
+    entity._values[self._name] = self._from_storage(value)
   
   def _get_stored_value(self, entity):
-    return entity._values[self._name]
+    return self._to_storage(entity._values[self._name])
+  
+  def _to_storage(self, value):
+    return value
+  
+  def _from_storage(self, value):
+    return value
   
   def query_uses_datastore(self, operator, value):
     raise NotImplementedError()

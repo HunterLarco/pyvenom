@@ -2,7 +2,7 @@
 from google.appengine.ext import ndb
 
 # package imports
-from model import ModelAttribute
+from attribute import ModelAttribute
 
 
 __all__ = [
@@ -91,7 +91,7 @@ class PropertyComparison(QueryComponent):
   def to_datastore_query(self, args, kwargs):
     prop_cls = self.property.to_datastore_property(self.operator, self.value)
     prop = prop_cls(indexed=True, name=self.property._name)
-    value = self.value
+    value = self.property._to_storage(self.value)
     if isinstance(self.value, QueryParameter):
       value = self.value.get_value(args, kwargs)
     if   self.operator == self.EQ: return prop == value
@@ -104,7 +104,7 @@ class PropertyComparison(QueryComponent):
     else: raise Exception('Unknown operator')
   
   def to_search_query(self, args, kwargs):
-    value = self.value
+    value = self.property._to_storage(self.value)
     if isinstance(self.value, QueryParameter):
       value = self.value.get_value(args, kwargs)
     if isinstance(value, str):

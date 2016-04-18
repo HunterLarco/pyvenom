@@ -192,9 +192,9 @@ class Query(AND, ModelAttribute):
   def __call__(self, *args, **kwargs):
     if self.uses_datastore():
       query = self.to_datastore_query(args, kwargs)
-      results = self._entity._execute_datastore_query(query)
+      results = self._model._execute_datastore_query(query)
       return QueryResults(results)
     else:
       query = self.to_search_query(args, kwargs)
-      results = self._entity._execute_search_query(query)
+      results = self._model._execute_search_query(query)
       return QueryResults(results)

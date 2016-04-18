@@ -44,14 +44,17 @@ class Model(object):
     for _, query in self._queries.items():
       query._connect(entity=self)
   
-  def _execute_datastore_query(self, query):
-    return self._execute_query(self.hybrid_model.query_by_datastore(query))
+  @classmethod
+  def _execute_datastore_query(cls, query):
+    return cls._execute_query(cls.hybrid_model.query_by_datastore(query))
   
-  def _execute_search_query(self, query):
-    return self._execute_query(self.hybrid_model.query_by_search(query))
+  @classmethod
+  def _execute_search_query(cls, query):
+    return cls._execute_query(cls.hybrid_model.query_by_search(query))
   
-  def _execute_query(self, results):
-    entities = map(self._entity_to_model, results)
+  @classmethod
+  def _execute_query(cls, results):
+    entities = map(cls._entity_to_model, results)
     return entities
   
   @classmethod

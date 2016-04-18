@@ -1,6 +1,8 @@
 from helper import smart_assert, BasicTestCase
 import venom
 
+from google.appengine.ext import ndb
+
 
 class ModelTest(BasicTestCase):
   def test_modelattribute_fixup(self):
@@ -71,6 +73,35 @@ class ModelTest(BasicTestCase):
     test._populate_from_stored(foo=10, bar=26)
     assert test.foo == 5
     assert test.bar == 13
+  
+  def test_saving_data(self):
+    class TestProp(venom.Properties.Property):
+      def __init__(self, required=False):
+        super(TestProp, self).__init__(required=required)
+        self.datastore_properties.add(ndb.IntegerProperty(indexed=False))
+        self.datastore = True
+      
+      def _set_stored_value(self, entity, value):
+        super(TestProp, self)._set_stored_value(entity, value // 2)
+  
+      def _get_stored_value(self, entity):
+        return super(TestProp, self)._get_stored_value(entity) * 2
+    
+    class Test(venom.Model):
+      foo = TestProp()
+      bar = TestProp()
+    
+    test = Test()
+    test.foo = 10
+    test.bar = 24
+    test.put()
+    
+    entities = test.hybrid_model.query_by_datastore()
+    assert len(entities) == 1
+    
+    entity = entities[0]
+    assert entity.foo == 20
+    assert entity.bar == 48
   
   
   

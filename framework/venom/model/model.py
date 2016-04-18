@@ -1,127 +1,91 @@
-# system imports
-import copy
-
-# application imports
-import Properties
-from query import Query, QueryDict
-from hybrid import HybridModel
+# package imports
+from ..internal.hybrid_model import HybridModel
+from attribute import ModelAttribute
+from Properties import Property
+from query import Query
 
 
-__all__ = ['Model']
+__all__ = ['Model', 'Model']
 
 
 class MetaModel(type):
   def __init__(cls, name, bases, classdict):
     super(MetaModel, cls).__init__(name, bases, classdict)
-    cls.all = Query()
-    cls._setup_properties()
-    cls._setup_queries()
+    cls._init_class()
 
 
 class Model(object):
   __metaclass__ = MetaModel
   
-  all = None
+  # attributes updates by metaclass
+  kind = None
+  hybrid_model = None
   
   @classmethod
-  def _setup_properties(cls):
-    cls._properties = {}
-    for key in dir(cls):
-      value = getattr(cls, key)
-      if isinstance(value, Properties.Property):
-        value._name = key
-        cls._properties[key] = value
+  def _init_class(cls):
+    from Properties import Property
+    cls.kind = cls.__name__
+    cls.hybrid_model = type(cls.kind, (HybridModel,), {})
+    cls._properties = ModelAttribute.connect(cls, kind=Property)
+    cls._queries = ModelAttribute.connect(cls, kind=Query)
   
-  @classmethod
-  def _setup_queries(cls):
-    cls._queries = QueryDict()
-    for key in dir(cls):
-      value = getattr(cls, key)
-      if isinstance(value, Query):
-        cls._queries[key] = value
-        value._model = cls
-  
-  @classmethod
-  def _query_by_search(cls, query, args, kwargs):
-    hybrid = HybridModel(cls.__name__)
-    entities = hybrid.query_by_search(query.to_query_string(args, kwargs))
-    entities = map(cls._entity_to_model, entities)
-    return entities
-  
-  @classmethod
-  def _query_by_ndb(cls, query, args, kwargs):
-    hybrid = HybridModel(cls.__name__)
-    query = hybrid.query_by_ndb(query.to_ndb_query(args, kwargs))
-    entities = map(cls._entity_to_model, query)
-    return entities
-  
-  @classmethod
-  def _entity_to_model(cls, entity):
-    if entity == None:
-      return None
-    prop_values = {}
-    for prop_name, ndb_prop in entity._properties.items():
-      if prop_name in cls._properties:
-        prop_values[prop_name] = ndb_prop._get_value(entity)
-    model = cls(id=entity.key.id())
-    model._from_database(**prop_values)
-    return model
-  
-  def __init__(self, id=None, **kwargs):
-    self._values = {}
-    self.id = id
+  def __init__(self, **kwargs):
+    super(Model, self).__init__()
+    self.hybrid_entity = self.hybrid_model()
+    self._connect_properties()
+    self._connect_queries()
     self.populate(**kwargs)
   
-  def __iter__(self):
-    for key, prop in self._properties.items():
-      if prop.hidden: continue
-      value = prop.__get__(self, self.__class__)
-      yield key, value
-    yield 'id', self.id
+  def _connect_properties(self):
+    for _, prop in self._properties.items():
+      prop._connect(entity=self)
   
-  def __json__(self):
-    return dict(self)
+  def _connect_queries(self):
+    for _, query in self._queries.items():
+      query._connect(entity=self)
   
-  def _from_database(self, **kwargs):
-    for key, value in kwargs.items():
-      if key in self._properties:
-        self._values[key] = value
+  @classmethod
+  def _execute_datastore_query(cls, query):
+    return cls._execute_query(cls.hybrid_model.query_by_datastore(query))
+  
+  @classmethod
+  def _execute_search_query(cls, query):
+    return cls._execute_query(cls.hybrid_model.query_by_search(query))
+  
+  @classmethod
+  def _execute_query(cls, results):
+    entities = map(cls._entity_to_model, results)
+    return entities
+  
+  @classmethod
+  def _entity_to_model(cls, ndb_entity):
+    properties = {name: prop._get_value(ndb_entity) for name, prop in ndb_entity._properties.items()}
+    entity = cls()
+    entity._populate_from_stored(**properties)
+    entity._set_key(ndb_entity.key)
+    return entity
   
   def populate(self, **kwargs):
     for key, value in kwargs.items():
       if key in self._properties:
         setattr(self, key, value)
   
-  def save(self):
-    hybrid = HybridModel(self.__class__.__name__)
+  def _populate_from_stored(self, **kwargs):
+    for key, value in kwargs.items():
+      if key in self._properties:
+        prop = self._properties[key]
+        prop._set_stored_value(self, value)
+  
+  def _set_key(self, key):
+    self.hybrid_entity.key = key
+    self.hybrid_entity.document_id = key.pairs()[0][1]
+  
+  def put(self):
     for key, prop in self._properties.items():
-      hybrid.property(key, prop.to_ndb_property(), prop.__get__(self, self.__class__))
-    
-    search_properties = self._queries.get_search_properties()
-    # invert the properties dictionary
-    property_to_name = {v: k for k, v in self._properties.items()}
-    for prop in search_properties:
-      name = property_to_name[prop]
-      hybrid.property(name, prop.to_search_field(), prop.__get__(self, self.__class__))
-    
-    hybrid.put()
-    
-    self.id = hybrid._model.key.id()
-    return self
-  
-  def delete(self):
-    hybrid = HybridModel(self.__class__.__name__)
-    hybrid.delete()
-  
-  @classmethod
-  def get(cls, identifier):
-    hybrid = HybridModel(cls.__name__)
-    entity = hybrid.get_by_id(identifier)
-    return cls._entity_to_model(entity)
-  
-  def __repr__(self):
-    props = []
-    for prop_name, prop in self._properties.items():
-      props.append('{}={}'.format(prop_name, prop.__get__(self, self.__class__)))
-    return '{}({})'.format(self.__class__.__name__, ', '.join(props))
-    
+      value = prop._get_stored_value(self)
+      if prop.search:
+        for field in prop.search_fields:
+          self.hybrid_entity.set(key, value, field)
+      property = prop.to_datastore_property()
+      self.hybrid_entity.set(key, value, property)
+    self.hybrid_entity.put()

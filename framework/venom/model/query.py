@@ -1,56 +1,67 @@
 # app engine imports
 from google.appengine.ext import ndb
 
-
-__all__  = ['QueryComponent', 'Query', 'PropertyQuery', 'QueryDict']
-__all__ += ['QueryParameter', 'QP']
-__all__ += ['QueryOperator', 'AND', 'OR']
+# package imports
+from attribute import ModelAttribute
 
 
-class QueryComponent(object):
-  def get_properties(self):
-    raise NotImplementedError()
-  
-  def uses_search_api(self):
-    raise NotImplementedError()
-  
-  def to_query_string(self, args, kwargs):
-    raise NotImplementedError()
-  
-  def to_ndb_query(self, args, kwargs):
-    raise NotImplementedError()
-  
-  def get_property_queries(self):
-    raise NotImplementedError()
-  
-  @classmethod
-  def require(cls, objects):
-    for obj in objects:
-      if not isinstance(obj, cls):
-        raise Exception('{} found when expecting an instance of QueryComponent'.format(obj))
+__all__ = [
+  'QueryParameter', 'QP', 'QueryComponent', 'QueryLogicalOperator',
+  'AND', 'OR', 'QueryResults', 'Query'
+]
 
 
 class QueryParameter(object):
-  DEFAULT = lambda: None
+  def __init__(self, key=None):
+    self.key = key
   
-  def __init__(self, name=None, default=DEFAULT):
-    super(QueryParameter, self).__init__()
-    self.name = name
-    self.default = default
+  def get_value(self, args, kwargs):
+    if self.key == None:
+      return self._get_value_from_args(args)
+    return self._get_value_from_kwargs(kwargs)
   
-  def has_default(self):
-    return self.default != self.DEFAULT
+  def _get_value_from_args(self, args):
+    if len(args) == 0:
+      raise IndexError('Not enough arguments for Query to execute')
+    
+    value = args[0]
+    del args[0]
+    return value
   
-  def __repr__(self):
-    optional = ''
-    if self.name != None:
-      optional = 'name={!r}'.format(self.name)
-    return 'QueryParameter({})'.format(optional)
-
+  def _get_value_from_kwargs(self, kwargs):
+    if not self.key in kwargs:
+      raise KeyError('Parameter keyword "{}" not found in {}'.format(self.key, kwargs))
+    
+    value = kwargs[self.key]
+    del kwargs[self.key]
+    return value
+  
 QP = QueryParameter
 
 
-class PropertyQuery(QueryComponent):
+class QueryComponent(object):
+  """
+  ' Used to provide common functionality across all query
+  ' components. This is why querys can be formed by many
+  ' different combinations of QueryComponents: they all
+  ' provide the same data just in different ways through
+  ' these methods.
+  """
+  
+  def uses_datastore(self):
+    raise NotImplementedError()
+  
+  def get_property_comparisons(self):
+    raise NotImplementedError()
+  
+  def to_datastore_query(self, args, kwargs):
+    raise NotImplementedError()
+  
+  def to_search_query(self, args, kwargs):
+    raise NotImplementedError()
+
+
+class PropertyComparison(QueryComponent):
   EQ = '='
   NE = '!='
   LT = '<'
@@ -58,198 +69,132 @@ class PropertyQuery(QueryComponent):
   GT = '>'
   GE = '>='
   IN = 'in'
-
-  def __init__(self, prop, operator, value):
-    self.property = prop
+  
+  allowed_operators = frozenset((EQ, NE, LT, LE, GT, GE, IN))
+  
+  def __init__(self, property, operator, value):
+    if not operator in self.allowed_operators:
+      raise Exception('Unknown operator "{}"'.format(operator))
+    
+    self.property = property
     self.operator = operator
     self.value = value
   
-  def __repr__(self):
-    value = self.value
+  """ [below] Implemented from QueryComponent """
+  
+  def uses_datastore(self):
+    return self.property.query_uses_datastore(self.operator, self.value)
+  
+  def get_property_comparisons(self):
+    return [self]
+  
+  def to_datastore_query(self, args, kwargs):
+    prop_cls = self.property.to_datastore_property()
+    prop = prop_cls(indexed=True, name=self.property._name)
+    value = self.property._to_storage(self.value)
+    if isinstance(self.value, QueryParameter):
+      value = self.value.get_value(args, kwargs)
+    if   self.operator == self.EQ: return prop == value
+    elif self.operator == self.NE: return prop != value
+    elif self.operator == self.LT: return prop < value
+    elif self.operator == self.LE: return prop <= value
+    elif self.operator == self.GT: return prop > value
+    elif self.operator == self.GE: return prop >= value
+    elif self.operator == self.IN: return prop.IN(value)
+    else: raise Exception('Unknown operator')
+  
+  def to_search_query(self, args, kwargs):
+    value = self.property._to_storage(self.value)
+    if isinstance(self.value, QueryParameter):
+      value = self.value.get_value(args, kwargs)
     if isinstance(value, str):
-      value = '{}'.format(value.replace('"', '\\"'))
+      value = '"{}"'.format(value.replace('"', '\\"'))
     if self.operator == self.NE:
       return '(NOT {} = {})'.format(self.property._name, value)
     return '{} {} {}'.format(self.property._name, self.operator, value)
   
-  def get_property_queries(self):
-    return [self]
-  
-  def get_properties(self):
-    return [self.property]
-  
-  def uses_search_api(self):
-    return self.property.search
-  
-  def _get_value(self, args, kwargs):
-    if not isinstance(self.value, QueryParameter):
-      return self.value
-    if self.value.name == None:
-      if len(args) == 0:
-        raise Exception('Not enough parameters for Query to execute')
-      arg = args[0]
-      del args[0]
-      return arg
-    else:
-      if not self.value.name in kwargs:
-        if not self.value.has_default():
-          raise Exception('Parameter keyword "{}" not found'.format(self.value.name))
-        return self.value.default
-      kwarg = kwargs[self.value.name]
-      del kwargs[self.value.name]
-      return kwarg
-  
-  def get_value(self, args, kwargs):
-    value = self._get_value(args, kwargs)
-    return self.property._hook_set(value)
-  
-  def to_query_string(self, args, kwargs):
-    value = self.get_value(args, kwargs)
-    if isinstance(value, str):
-      value = '{}'.format(value.replace('"', '\\"'))
-    if self.operator == self.NE:
-      return '(NOT {} = {})'.format(self.property._name, value)
-    return '{} {} {}'.format(self.property._name, self.operator, value) 
-  
-  def to_ndb_query(self, args, kwargs):
-    if self.operator == self.EQ:
-      return self.property.to_ndb_property() == self.get_value(args, kwargs)
-    elif self.operator == self.NE:
-      return self.property.to_ndb_property() != self.get_value(args, kwargs)
-    elif self.operator == self.LT:
-      return self.property.to_ndb_property() < self.get_value(args, kwargs)
-    elif self.operator == self.LE:
-      return self.property.to_ndb_property() <= self.get_value(args, kwargs)
-    elif self.operator == self.GT:
-      return self.property.to_ndb_property() > self.get_value(args, kwargs)
-    elif self.operator == self.GE:
-      return self.property.to_ndb_property() >= self.get_value(args, kwargs)
-    elif self.operator == self.IN:
-      return self.property.to_ndb_property().IN(self.get_value(args, kwargs))
-    else:
-      raise Exception('Unknown operator')
-    
+  """ [end] QueryComponent implementation """
 
 
-class Query(QueryComponent):
-  def __init__(self, *queries):
-    queries = map(self._sanitize_queries, queries)
-    QueryComponent.require(queries)
-    self.queries = queries
-    self._and = AND(*queries)
-    self._model = None
+class QueryLogicalOperator(QueryComponent):
+  datastore_conjuntion = None
+  search_conjunction = None
   
-  @staticmethod
-  def _sanitize_queries(query):
-    if not isinstance(query, QueryComponent):
-      return query == QueryParameter()
-    return query
+  def __init__(self, *components):
+    self.components = components
   
-  def uses_search_api(self):
-    return self._contains_search_property() or self._contains_illegal_query()
+  """ [below] Implemented from QueryComponent """
   
-  def _contains_search_property(self):
-    return self._and.uses_search_api()
+  def uses_datastore(self):
+    """ If a single component uses the search api
+        so must this function """
+    for component in self.components:
+      if not component.uses_datastore():
+        return False
+    return True
   
-  def _contains_illegal_query(self):
-    return self._contains_multiple_inequalities()
+  def get_property_comparisons(self):
+    property_comparisons = []
+    for component in self.components:
+      property_comparisons.extend(component.get_property_comparisons())
+    return property_comparisons
   
-  def _contains_multiple_inequalities(self):
+  def to_datastore_query(self, args, kwargs):
+    if self.datastore_conjuntion == None:
+      raise ValueError('self.datastore_conjuntion cannot be None')
+    return self.datastore_conjuntion(
+      *map(lambda component: component.to_datastore_query(args, kwargs), self.components))
+  
+  def to_search_query(self, args, kwargs):
+    if self.datastore_conjuntion == None:
+      raise ValueError('self.search_conjunction cannot be None')
+    query_strings = map(lambda component: component.to_search_query(args, kwargs), self.components)
+    query_string = ' {} '.format(self.search_conjunction).join(query_strings)
+    return '({})'.format(query_string)
+  
+  """ [end] QueryComponent implementation """
+
+
+class AND(QueryLogicalOperator):
+  datastore_conjuntion = ndb.AND
+  search_conjunction = 'AND'
+
+
+class OR(QueryLogicalOperator):
+  datastore_conjuntion = ndb.OR
+  search_conjunction = 'OR'
+
+
+class QueryResults(list):
+  pass
+
+
+class Query(AND, ModelAttribute):
+  def __init__(self, *components):
+    super(Query, self).__init__(*components)
+  
+  """ [below] Implemented from QueryComponent """
+  
+  def uses_datastore(self):
+    return super(Query, self).uses_datastore() and not self._uses_illegal_query()
+  
+  """ [end] QueryComponent implementation """
+  
+  def _uses_illegal_query(self):
     inequalities = set()
-    for param_query in self._and.get_property_queries():
-      if param_query.operator != PropertyQuery.EQ:
-        inequalities.add(param_query.property)
+    for comparison in self.get_property_comparisons():
+      if comparison.operator != PropertyComparison.EQ:
+        inequalities.add(comparison.property)
         if len(inequalities) > 1:
           return True
     return False
   
-  def get_property_queries(self):
-    return self._and.get_property_queries()
-  
-  def get_properties(self):
-    return self._and.get_properties()
-  
-  def to_query_string(self, args, kwargs):
-    return self._and.to_query_string(args, kwargs)
-  
-  def to_ndb_query(self, args, kwargs):
-    if not self.queries:
-      return None
-    return self._and.to_ndb_query(args, kwargs)
-  
   def __call__(self, *args, **kwargs):
-    if not self._model:
-      raise Exception('Query cannot execute outside of a venom.Model class')
-    if self.uses_search_api():
-      return self._execute_search_query(list(args), kwargs)
-    return self._execute_ndb_query(list(args), kwargs)
-  
-  def _execute_search_query(self, args, kwargs):
-    return self._model._query_by_search(self, args, kwargs)
-  
-  def _execute_ndb_query(self, args, kwargs):
-    return self._model._query_by_ndb(self, args, kwargs)
-  
-  def __repr__(self):
-    return 'Query({})'.format(self._and)
-          
-
-class QueryDict(dict):
-  def get_search_properties(self):
-    properties = set()
-    for _, query in self.items():
-      if not isinstance(query, QueryComponent):
-        continue
-      if query.uses_search_api():
-        properties |= query.get_properties()
-    return properties
-      
-
-class QueryOperator(QueryComponent):
-  def __init__(self, *queries):
-    QueryComponent.require(queries)
-    self.queries = queries
-  
-  def get_property_queries(self):
-    properties = set()
-    for query in self.queries:
-      properties |= set(query.get_property_queries())
-    return properties
-  
-  def get_properties(self):
-    properties = set()
-    for query in self.queries:
-      properties |= set(query.get_properties())
-    return properties
-  
-  def uses_search_api(self):
-    for query in self.queries:
-      if query.uses_search_api():
-        return True
-    return False
-
-
-class AND(QueryOperator):
-  def __repr__(self):
-    return 'AND({})'.format(', '.join(map(repr, self.queries)))
-  
-  def to_query_string(self, args, kwargs):
-    query_strings = map(lambda x: x.to_query_string(args, kwargs), self.queries)
-    query_string = ' AND '.join(query_strings)
-    return '({})'.format(query_string)
-  
-  def to_ndb_query(self, args, kwargs):
-    return ndb.AND(*map(lambda x: x.to_ndb_query(args, kwargs), self.queries))
-
-
-class OR(QueryOperator):
-  def __repr__(self):
-    return 'OR({})'.format(', '.join(map(repr, self.queries)))
-  
-  def to_query_string(self, args, kwargs):
-    query_strings = map(lambda x: x.to_query_string(args, kwargs), self.queries)
-    query_string = ' OR '.join(query_strings)
-    return '({})'.format(query_string)
-  
-  def to_ndb_query(self, args, kwargs):
-    return ndb.OR(*map(lambda x: x.to_ndb_query(args, kwargs), self.queries))
+    if self.uses_datastore():
+      query = self.to_datastore_query(args, kwargs)
+      results = self._model._execute_datastore_query(query)
+      return QueryResults(results)
+    else:
+      query = self.to_search_query(args, kwargs)
+      results = self._model._execute_search_query(query)
+      return QueryResults(results)

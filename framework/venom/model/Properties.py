@@ -1,252 +1,128 @@
-# application imports
-from query import PropertyQuery
-
 # app engine imports
-from google.appengine.api import search
 from google.appengine.ext import ndb
 
+# package imports
+from attribute import ModelAttribute
+from query import PropertyComparison
 
-__all__ = ['Property', 'String', 'Integer']
-__all__ += ['QueryNotSupported', 'InvalidModelPropertyConnection', 'PropertyEnforcementFailed', 'InvalidPropertyInitialization']
+
+__all__  = ['Property']
+__all__ += ['InvalidPropertyComparison', 'PropertyValidationFailed']
 
 
-class QueryNotSupported(Exception):
+class InvalidPropertyComparison(Exception):
   pass
 
-class InvalidModelPropertyConnection(Exception):
-  pass
-
-class PropertyEnforcementFailed(Exception):
-  pass
-
-class InvalidPropertyInitialization(Exception):
+class PropertyValidationFailed(Exception):
   pass
 
 
-class Property(object):
+class Property(ModelAttribute):
   allowed_operators = frozenset()
   
-  def __init__(self, required=False, default=None, choices=None, hidden=False):
-    if required and default != None:
-      raise InvalidPropertyInitialization('Property have a default value if required')
+  def __init__(self, required=False):
+    super(Property, self).__init__()
     
     self.required = required
-    self.default = default
-    self.choices = choices
-    self.hidden = hidden
     
-    self._name = None
-    
-    self.is_queried = False
     self.search = False
+    self.datastore = False
+    self.compared = False
     
-  def _fix_up(self, name, instance):
-    self._name = name
+    self.search_fields = set()
+    
+    self._values = {}
   
-  def to_ndb_property(self):
+  def _connect(self, entity=None, name=None, model=None):
+    super(Property, self)._connect(entity=entity, name=name, model=model)
+    if entity and not hasattr(entity, '_values'):
+      setattr(entity, '_values', {})
+  
+  def validate(self, value):
+    if self.required and value == None:
+      raise PropertyValidationFailed('Required property was None')
+  
+  @staticmethod
+  def _force_list(value):
+    if not isinstance(value, list):
+      return [value]
+    return value
+  
+  def to_search_field(self, operator, value):
     raise NotImplementedError()
   
-  def to_search_field(self):
+  def _to_datastore_property(self):
+    prop = self.to_datastore_property()
+    if issubclass(prop, ndb.Property):
+      prop = prop()
+    prop._indexed = self.datastore
+    return prop
+  
+  def to_datastore_property(self):
     raise NotImplementedError()
   
-  def enforce(self, value):
-    # required and default
-    if not value:
-      if self.required:
-        raise PropertyEnforcementFailed('Value missing when required')
-    
-    # choices
-    if self.choices != None:
-      if value not in self.choices:
-        raise PropertyEnforcementFailed('Value not in required choices')
-
   def __get__(self, instance, cls):
     if instance == None:
       # called on a class
       return self
-    if not self._name in instance._values:
-      return self._hook_get(self.default)
-    return self._hook_get(instance._values[self._name])
+    return self._get_value(instance)
 
   def __set__(self, instance, value):
-    self.enforce(value)
-    instance._values[self._name] = self._hook_set(value)
-
-  def _hook_set(self, value):
+    return self._set_value(instance, value)
+  
+  def _set_value(self, entity, value):
+    entity._values[self._name] = value
+  
+  def _get_value(self, entity):
+    return entity._values[self._name]
+  
+  def _set_stored_value(self, entity, value):
+    entity._values[self._name] = self._from_storage(value)
+  
+  def _get_stored_value(self, entity):
+    return self._to_storage(entity._values[self._name])
+  
+  def _to_storage(self, value):
     return value
   
-  def _hook_get(self, value):
+  def _from_storage(self, value):
     return value
-
-  def __delete__(self,instance):
-    raise AttributeError('Can\'t delete attribute')
-
+  
+  def query_uses_datastore(self, operator, value):
+    raise NotImplementedError()
+  
+  def _handle_comparison(self, operator, value):
+    if not operator in self.allowed_operators:
+      raise InvalidPropertyComparison('Property does not support {} comparisons'.format(operator))
+    self.compared = True
+    
+    uses_datastore = self.query_uses_datastore(operator, value)
+    if uses_datastore:
+      self.datastore = True
+    else:
+      self.search = True
+      search_field = self.to_search_field(operator, value)
+      self.search_fields.add(search_field)
+    
+    return PropertyComparison(self, operator, value)
+  
   def __eq__(self, value):
-    if not PropertyQuery.EQ in self.allowed_operators:
-      raise QueryNotSupported('Property does not support == queries')
-    self.is_queried = True
-    self._on_query()
-    return PropertyQuery(self, PropertyQuery.EQ, value)
-  
+    return self._handle_comparison(PropertyComparison.EQ, value)
+
   def __ne__(self, value):
-    if not PropertyQuery.NE in self.allowed_operators:
-      raise QueryNotSupported('Property does not support != queries')
-    self.is_queried = True
-    self._on_query()
-    return PropertyQuery(self, PropertyQuery.NE, value)
-  
+    return self._handle_comparison(PropertyComparison.NE, value)
+
   def __lt__(self, value):
-    if not PropertyQuery.LT in self.allowed_operators:
-      raise QueryNotSupported('Property does not support < queries')
-    self.is_queried = True
-    self._on_query()
-    return PropertyQuery(self, PropertyQuery.LT, value)
-  
+    return self._handle_comparison(PropertyComparison.LT, value)
+
   def __le__(self, value):
-    if not PropertyQuery.LE in self.allowed_operators:
-      raise QueryNotSupported('Property does not support <= queries')
-    self.is_queried = True
-    self._on_query()
-    return PropertyQuery(self, PropertyQuery.LE, value)
-  
+    return self._handle_comparison(PropertyComparison.LE, value)
+
   def __gt__(self, value):
-    if not PropertyQuery.GT in self.allowed_operators:
-      raise QueryNotSupported('Property does not support > queries')
-    self.is_queried = True
-    self._on_query()
-    return PropertyQuery(self, PropertyQuery.GT, value)
-  
+    return self._handle_comparison(PropertyComparison.GT, value)
+
   def __ge__(self, value):
-    if not PropertyQuery.GE in self.allowed_operators:
-      raise QueryNotSupported('Property does not support >= queries')
-    self.is_queried = True
-    self._on_query()
-    return PropertyQuery(self, PropertyQuery.GE, value)
+    return self._handle_comparison(PropertyComparison.GE, value)
   
   def contains(self, value):
-    if not PropertyQuery.IN in self.allowed_operators:
-      raise QueryNotSupported('Property does not support IN queries')
-    self.is_queried = True
-    self._on_query()
-    return PropertyQuery(self, PropertyQuery.IN, value)
-  
-  def _on_query(self):
-    pass
-  
-  def __repr__(self):
-    classname = self.__class__.__name__
-    return '{}(default={!r}, required={!r}, choices={!r}, hidden={!r})'.format(classname, self.default, self.required, self.choices, self.hidden)
-  
-
-class String(Property):
-  allowed_operators = frozenset((
-    PropertyQuery.EQ,
-    PropertyQuery.NE,
-    PropertyQuery.IN
-  ))
-  
-  def __init__(self, required=False, default=None, min=None, max=500, characters=None, choices=None, hidden=False):
-    self.max = max
-    self.min = min
-    self.characters = characters
-    super(String, self).__init__(required=required, default=default, choices=choices, hidden=hidden)
-  
-  def _on_query(self):
-    if self.max == None or self.max > 500:
-      self.search = True
-  
-  def to_ndb_property(self):
-    indexed = self.is_queried and not self.search
-    return ndb.StringProperty(indexed=indexed, name=self._name)
-  
-  def to_search_field(self):
-    return search.TextField
-  
-  def enforce(self, value):
-    super(String, self).enforce(value)
-    if value == None: return value
-    
-    # type str
-    if not isinstance(value, str) and not isinstance(value, unicode):
-      raise PropertyEnforcementFailed('StringProperty must be of type str')
-
-    # min
-    if self.min != None and len(value) < self.min:
-      raise PropertyEnforcementFailed('StringProperty value less than minimum character length')
-
-    # max
-    if self.max != None and len(value) > self.max:
-      raise PropertyEnforcementFailed('StringProperty value greater than maximum character length')
-
-    # characters
-    if self.characters != None and len(set(value) - set(self.characters)) > 0:
-      raise PropertyEnforcementFailed('StringProperty value contains characters not permitted from "{}"'.format(self.characters))
-
-
-class Password(String):
-  allowed_operators = frozenset((
-    PropertyQuery.EQ
-  ))
-  
-  def __init__(self, required=False, default=None, min=None, max=500, characters=None, hidden=False):
-    super(Password, self).__init__(required=required, default=default, hidden=hidden)
-  
-  def _hook_set(self, value):
-    import hashlib
-    return hashlib.sha256(value).hexdigest()
-
-class Integer(Property):
-  allowed_operators = frozenset((
-    PropertyQuery.EQ,
-    PropertyQuery.LT,
-    PropertyQuery.LE,
-    PropertyQuery.GT,
-    PropertyQuery.GE,
-    PropertyQuery.NE
-  ))
-  
-  def __init__(self, required=False, default=None, min=None, max=None, choices=None, hidden=False):
-    self.min = min
-    self.max = max
-    super(Integer, self).__init__(required=required, default=default, choices=choices, hidden=hidden)
-  
-  def to_ndb_property(self):
-    indexed = self.is_queried and not self.search
-    return ndb.IntegerProperty(indexed=indexed, name=self._name)
-  
-  def to_search_field(self):
-    return search.NumberField
-  
-  def __get__(self, instance, cls):
-    if instance == None:
-      # called on a class
-      return self
-    if not self._name in instance._values:
-      return int(self.default)
-    value = instance._values[self._name]
-    if value == None:
-      return None
-    return int(value)
-  
-  def __set__(self, instance, value):
-    if value == None:
-      value = self.default
-    self.enforce(value)
-    instance._values[self._name] = int(value) if value != None else None
-  
-  def enforce(self, value):
-    super(Integer, self).enforce(value)
-    if value == None: return value
-    
-    # type str
-    if not isinstance(value, int) and not isinstance(value, long):
-      raise PropertyEnforcementFailed('Integer must be of type int or long')
-
-    # min
-    if self.min != None and value < self.min:
-      raise PropertyEnforcementFailed('Integer value less than minimum character length')
-
-    # max
-    if self.max != None and value > self.max:
-      raise PropertyEnforcementFailed('Integer value greater than maximum character length')
-
+    return self._handle_comparison(PropertyComparison.IN, value)

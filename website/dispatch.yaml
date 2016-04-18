@@ -1,0 +1,11 @@
+application: use-pyvenom
+dispatch:
+  
+  - url: "api.venom.io/*"
+    module: api
+  
+  - url: "py.venom.io/*"
+    module: py
+  
+  - url: "app.venom.io/*"
+    module: app

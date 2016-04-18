@@ -4,6 +4,7 @@ import unittest
 # app engine imports
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
+from google.appengine.api.search import simple_search_stub
 from google.appengine.ext import testbed
 
 
@@ -19,6 +20,7 @@ class BasicTestCase(unittest.TestCase):
     # Next, declare which service stubs you want to use.
     self.testbed.init_datastore_v3_stub()
     self.testbed.init_memcache_stub()
+    self.testbed.init_search_stub()
     # Clear ndb's in-context cache between tests.
     # This prevents data from leaking between tests.
     # Alternatively, you could disable caching by

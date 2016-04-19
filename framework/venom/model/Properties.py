@@ -20,6 +20,7 @@ class PropertyValidationFailed(Exception):
 
 class Property(ModelAttribute):
   allowed_operators = frozenset()
+  allowed_types = frozenset()
   
   def __init__(self, required=False):
     super(Property, self).__init__()
@@ -33,6 +34,13 @@ class Property(ModelAttribute):
   def validate(self, value):
     if self.required and value == None:
       raise PropertyValidationFailed('Required property was None')
+    
+    if len(self.allowed_types) > 0:
+      for allowed_type in self.allowed_types:
+        if isinstance(value, allowed_type):
+          break
+      else:
+        raise PropertyValidationFailed('Property value does not conform to allowed_types')
   
   @staticmethod
   def _force_list(value):
@@ -127,6 +135,7 @@ class ChoicesProperty(Property):
 
 class Integer(ChoicesProperty):
   allowed_operators = PropertyComparison.allowed_operators
+  allowed_types = frozenset({int})
   
   def __init__(self, required=False, choices=None, min=None, max=None):
     super(Integer, self).__init__(required=required, choices=choices)
@@ -141,13 +150,8 @@ class Integer(ChoicesProperty):
   def validate(self, value):
     super(Integer, self).validate(value)
     if value == None: return
-    self._validate_type(value)
     self._validate_min(value)
     self._validate_max(value)
-  
-  def _validate_type(self, value):
-    if not isinstance(value, int):
-      raise PropertyValidationFailed('IntegerProperty value must be an int instance')
   
   def _validate_min(self, value):
     if self.min == None: return
@@ -170,9 +174,7 @@ class Integer(ChoicesProperty):
     
 
 class Float(Integer):
-  def _validate_type(self, value):
-    if not isinstance(value, float) and not isinstance(value, int):
-      raise PropertyValidationFailed('FloatProperty value must be an int or float instance')
+  allowed_types = frozenset((float, int))
   
   def _to_storage(self, value):
     if value == None:
@@ -190,6 +192,7 @@ class Float(Integer):
 
 class String(ChoicesProperty):
   allowed_operators = PropertyComparison.allowed_operators
+  allowed_types = [str, unicode]
   
   def __init__(self, required=False, choices=None, min=None, max=500, characters=None):
     super(String, self).__init__(required=required, choices=choices)

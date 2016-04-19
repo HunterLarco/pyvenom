@@ -28,13 +28,14 @@ version1.POST('/signup', SignupHandler).body({
 
 # right now this has an error where it created
 # a new user instead of updating the old one
+venom.ui(
 version1.PUT('/profile/:user', ProfileHandler).url({
   'user': venom.Parameters.Model(User)
 }).body({
   'username': venom.Parameters.String(required=False),
   'password': venom.Parameters.String(required=False),
   'age': venom.Parameters.Integer(required=False)
-})
+}), 'ui-56389134')
 
 version1.GET('/groups/:tag', GroupsHandler).url({
   'tag': venom.Parameters.String(choices=[

@@ -86,6 +86,7 @@ class Model(object):
   def __init__(self, **kwargs):
     super(Model, self).__init__()
     self.hybrid_entity = self.hybrid_model()
+    self.key = None
     self._connect_properties()
     self._connect_queries()
     self.populate(**kwargs)

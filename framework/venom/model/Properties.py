@@ -65,10 +65,14 @@ class Property(ModelAttribute):
     return entity._values[self._name]
   
   def _set_stored_value(self, entity, value):
-    self._set_value(entity, self._from_storage(value))
+    entity._values[self._name] = self._from_storage(value)
   
   def _get_stored_value(self, entity):
-    return self._to_storage(self._get_value(entity))
+    if not self._name in entity._values:
+      value = None
+    else:
+      value = entity._values[self._name]
+    return self._to_storage(value)
   
   def _to_storage(self, value):
     return value
@@ -130,10 +134,13 @@ class Integer(ChoicesProperty):
     self.max = max
     
   def _from_storage(self, value):
+    if value == None:
+      return None
     return int(value)
     
   def validate(self, value):
     super(Integer, self).validate(value)
+    if value == None: return
     self._validate_type(value)
     self._validate_min(value)
     self._validate_max(value)
@@ -168,9 +175,13 @@ class Float(Integer):
       raise PropertyValidationFailed('FloatProperty value must be an int or float instance')
   
   def _to_storage(self, value):
+    if value == None:
+      return None
     return float(value)
   
   def _from_storage(self, value):
+    if value == None:
+      return None
     return float(value)
   
   def to_datastore_property(self):
@@ -194,6 +205,7 @@ class String(ChoicesProperty):
   
   def validate(self, value):
     super(String, self).validate(value)
+    if value == None: return
     self._validate_type(value)
     self._validate_min(value)
     self._validate_max(value)
@@ -238,11 +250,37 @@ class Password(String):
     self.validate(value)
     entity._values[self._name] = self._hash(value)
 
-  def _set_stored_value(self, entity, value):
-    entity._values[self._name] = self._from_storage(value)
-
   def _get_stored_value(self, entity):
     return self._get_value(entity)
 
   def _to_storage(self, value):
     return self._hash(value)
+
+
+class Model(Property):
+  def __init__(self, model, required=False):
+    super(Model, self).__init__(required=required)
+    self.model = model
+
+  def _get_value(self, entity):
+    value = super(Model, self)._get_value(entity)
+    if not isinstance(value, self.model):
+      value = self.model.get(value)
+    self._set_value(entity, value)
+    return value
+
+  def _to_storage(self, value):
+    if value == None:
+      return None
+    if isinstance(value, self.model):
+      return value.key
+    return value
+  
+  def to_search_field(self):
+    return search.TextField
+  
+  def to_datastore_property(self):
+    return ndb.StringProperty
+  
+  def query_uses_datastore(self, operator, value):
+    return True

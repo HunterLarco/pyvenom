@@ -53,39 +53,6 @@ class BasePropertyTest(BasicTestCase):
     with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
       prop.contains(1)
   
-  def test_uses_datastore_method(self):
-    class TestProp(venom.Properties.Property):
-      allowed_operators = venom.Properties.PropertyComparison.allowed_operators
-      
-      def query_uses_datastore(self, operator, value):
-        return operator == venom.Properties.PropertyComparison.EQ
-      
-      def to_search_field(self, operator, value):
-        return 'search'
-  
-      def to_datastore_property(self):
-        return 'datastore'
-    
-    prop = TestProp()
-    with smart_assert.raises() as context:
-      prop == 1
-    
-    assert prop.search == False
-    assert prop.datastore == True
-    assert prop.compared == True
-    assert prop.search_fields == set()
-    
-    # TODO test prop.to_datastore_property()
-    
-    prop < 4
-    
-    assert prop.search == True
-    assert prop.datastore == True
-    assert prop.compared == True
-    assert prop.search_fields == set(['search'])
-    
-    # TODO test prop.to_datastore_property()
-  
   def test_base_validatation(self):
     class TestProp(venom.Properties.Property):
       pass

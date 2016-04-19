@@ -128,3 +128,7 @@ class ModelTest(BasicTestCase):
     entity = entities[0]
     assert entity.foo == 34
     assert entity.bar == 24
+
+  def test_schema(self):
+    # TODO test schema
+    raise Exception('TODO')

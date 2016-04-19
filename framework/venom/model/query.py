@@ -1,3 +1,6 @@
+# system imports
+import inspect
+
 # app engine imports
 from google.appengine.ext import ndb
 
@@ -7,7 +10,7 @@ from attribute import ModelAttribute
 
 __all__ = [
   'QueryParameter', 'QP', 'QueryComponent', 'QueryLogicalOperator',
-  'AND', 'OR', 'QueryResults', 'Query'
+  'AND', 'OR', 'QueryResults', 'Query', 'PropertyComparison'
 ]
 
 
@@ -89,11 +92,17 @@ class PropertyComparison(QueryComponent):
     return [self]
   
   def to_datastore_query(self, args, kwargs):
-    prop_cls = self.property.to_datastore_property()
-    prop = prop_cls(indexed=True, name=self.property._name)
+    prop = self.property.to_datastore_property()
+    if inspect.isclass(prop):
+      prop = prop(indexed=True, name=self.property._name)
+    else:
+      prop._name = self.property._name
+      prop._indexed = True
     value = self.property._to_storage(self.value)
     if isinstance(self.value, QueryParameter):
       value = self.value.get_value(args, kwargs)
+    elif inspect.isclass(self.value) and issubclass(self.value, QueryParameter):
+      value = self.value().get_value(args, kwargs)
     if   self.operator == self.EQ: return prop == value
     elif self.operator == self.NE: return prop != value
     elif self.operator == self.LT: return prop < value
@@ -107,6 +116,8 @@ class PropertyComparison(QueryComponent):
     value = self.property._to_storage(self.value)
     if isinstance(self.value, QueryParameter):
       value = self.value.get_value(args, kwargs)
+    elif inspect.isclass(self.value) and issubclass(self.value, QueryParameter):
+      value = self.value().get_value(args, kwargs)
     if isinstance(value, str):
       value = '"{}"'.format(value.replace('"', '\\"'))
     if self.operator == self.NE:

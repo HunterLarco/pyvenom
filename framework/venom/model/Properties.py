@@ -22,16 +22,7 @@ class Property(ModelAttribute):
   
   def __init__(self, required=False):
     super(Property, self).__init__()
-    
     self.required = required
-    
-    self.search = False
-    self.datastore = False
-    self.compared = False
-    
-    self.search_fields = set()
-    
-    self._values = {}
   
   def _connect(self, entity=None, name=None, model=None):
     super(Property, self)._connect(entity=entity, name=name, model=model)
@@ -48,15 +39,8 @@ class Property(ModelAttribute):
       return [value]
     return value
   
-  def to_search_field(self, operator, value):
+  def to_search_field(self):
     raise NotImplementedError()
-  
-  def _to_datastore_property(self):
-    prop = self.to_datastore_property()
-    if issubclass(prop, ndb.Property):
-      prop = prop()
-    prop._indexed = self.datastore
-    return prop
   
   def to_datastore_property(self):
     raise NotImplementedError()
@@ -74,13 +58,15 @@ class Property(ModelAttribute):
     entity._values[self._name] = value
   
   def _get_value(self, entity):
+    if not self._name in entity._values:
+      return None
     return entity._values[self._name]
   
   def _set_stored_value(self, entity, value):
-    entity._values[self._name] = self._from_storage(value)
+    self._set_value(entity, self._from_storage(value))
   
   def _get_stored_value(self, entity):
-    return self._to_storage(entity._values[self._name])
+    return self._to_storage(self._get_value(entity))
   
   def _to_storage(self, value):
     return value
@@ -94,16 +80,6 @@ class Property(ModelAttribute):
   def _handle_comparison(self, operator, value):
     if not operator in self.allowed_operators:
       raise InvalidPropertyComparison('Property does not support {} comparisons'.format(operator))
-    self.compared = True
-    
-    uses_datastore = self.query_uses_datastore(operator, value)
-    if uses_datastore:
-      self.datastore = True
-    else:
-      self.search = True
-      search_field = self.to_search_field(operator, value)
-      self.search_fields.add(search_field)
-    
     return PropertyComparison(self, operator, value)
   
   def __eq__(self, value):

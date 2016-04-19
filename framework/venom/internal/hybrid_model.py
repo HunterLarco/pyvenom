@@ -127,9 +127,9 @@ class HybridModel(object):
       field.name: field
       for field in document.fields
     }
+    if set(fields.keys()) != set(self._search_properties.keys()):
+      return True
     for key, prop in self._search_properties.items():
-      if not key in fields:
-        return True
       field_value = fields[key].value
       if not field_value == prop.value:
         return True

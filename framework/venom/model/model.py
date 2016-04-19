@@ -113,11 +113,13 @@ class Model(object):
     return entities
   
   @classmethod
-  def _entity_to_model(cls, ndb_entity):
+  def _entity_to_model(cls, hybrid_entity):
+    ndb_entity = hybrid_entity.entity
     properties = {name: prop._get_value(ndb_entity) for name, prop in ndb_entity._properties.items()}
     entity = cls()
     entity._populate_from_stored(**properties)
-    entity._set_key(ndb_entity.key)
+    entity.hybrid_entity = hybrid_entity
+    entity.key = entity.hybrid_entity.document_id
     return entity
   
   def populate(self, **kwargs):
@@ -154,8 +156,8 @@ class Model(object):
         self.hybrid_entity.set(key, value, field)
       property = prop.to_datastore_property()
       self.hybrid_entity.set(key, value, property)
-    ndb_entity = self.hybrid_entity.put()
-    self._set_key(ndb_entity.key)
+    self.hybrid_entity.put()
+    self.key = self.hybrid_entity.document_id
     return self
   
   @classmethod

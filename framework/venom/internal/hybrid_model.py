@@ -57,15 +57,19 @@ class HybridModel(object):
     cls.model = type(cls.kind, (DynamicModel,), {})
     cls.index = search.Index(name=cls.kind)
   
-  def __init__(self, key=None, document_id=None):
+  def __init__(self, key=None, document_id=None, entity=None):
     super(HybridModel, self).__init__()
     self._search_properties = {}
     self._datastore_properties = {}
     self.key = None
-    if key:
+    self.entity = entity
+    if entity:
+      self.key = entity.key
+      self.document_id = self.key.pairs()[0][1]
+    elif key:
       self.key = key
       self.document_id = key.pairs()[0][1]
-    if document_id:
+    elif document_id:
       self.key = ndb.Key(self.kind, document_id)
       self.document_id = document_id
   
@@ -98,9 +102,8 @@ class HybridModel(object):
     return entity
   
   def put(self):
-    if self.key:
-      return self._put_update()
-    return self._put_new()
+    if self.key: self._put_update()
+    else: self._put_new()
   
   def _put_new(self):
     document = self._to_search_document()
@@ -113,6 +116,7 @@ class HybridModel(object):
     # since they do not exist
     self.key = entity_key
     self.document_id = document_id
+    self.entity = entity
     return entity
   
   def _put_update(self):
@@ -125,7 +129,7 @@ class HybridModel(object):
     document = search.Document(fields=search_properties.values(), doc_id=self.document_id)
     self.index.put(document)
     
-    entity = self.key.get()
+    entity = self.key.get() if not self.entity else self.entity
     for key, (value, prop) in self._datastore_properties.items():
       if not hasattr(entity, key):
         entity.set(key, value, prop)
@@ -141,13 +145,18 @@ class HybridModel(object):
     documents = self.index.search(query)
     keys = [ndb.Key(self.kind, document.doc_id) for document in documents]
     entities = ndb.get_multi(keys)
-    return entities
+    hybrid_entities = map(self.entity_to_hybrid_entity, entities)
+    return hybrid_entities
   
   @classmethod
   def query_by_datastore(self, query_component=None):
     query = self.model.query(query_component) if query_component else self.model.query()
-    entities = list(query)
-    return entities
+    hybrid_entities = map(self.entity_to_hybrid_entity, query)
+    return hybrid_entities
+  
+  @classmethod
+  def entity_to_hybrid_entity(cls, entity):
+    return cls(entity=entity)
   
   def delete(self):
     self.index.delete(self.document_id)
@@ -157,4 +166,5 @@ class HybridModel(object):
   def get(cls, key=None, document_id=None):
     if document_id:
       key = ndb.Key(cls.kind, document_id)
-    return key.get()
+    entity = key.get()
+    return cls.entity_to_hybrid_entity(entity)

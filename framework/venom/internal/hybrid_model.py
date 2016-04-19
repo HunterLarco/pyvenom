@@ -1,3 +1,4 @@
+# system imports
 from google.appengine.ext import ndb
 from google.appengine.api import search
 
@@ -206,3 +207,10 @@ class HybridModel(object):
       key = ndb.Key(cls.kind, document_id)
     entity = key.get()
     return cls.entity_to_hybrid_entity(entity)
+  
+  @classmethod
+  def get_multi(cls, keys=None, document_ids=None):
+    if document_ids:
+      keys = map(lambda id: ndb.Key(cls.kind, id), document_ids)
+    entities = ndb.get_multi(keys)
+    return map(cls.entity_to_hybrid_entity, entities)

@@ -193,3 +193,34 @@ class HybridModelTest(BasicTestCase):
     
     assert entity.put() == True
     assert entity.put() == False
+
+  def test_get(self):
+    entity = TestHybrid()
+    entity.set('foo', 123, ndb.IntegerProperty)
+    entity.set('foo', 123, search.NumberField)
+    entity.put()
+    
+    key1 = entity.key
+    doc1 = entity.document_id
+    
+    entity = TestHybrid.get(key=key1)
+    assert entity.entity.foo == 123
+    entity = TestHybrid.get(document_id=doc1)
+    assert entity.entity.foo == 123
+    
+    entity = TestHybrid()
+    entity.set('foo', 456, ndb.IntegerProperty)
+    entity.set('foo', 456, search.NumberField)
+    entity.put()
+    
+    key2 = entity.key
+    doc2 = entity.document_id
+    
+    entities = TestHybrid.get_multi(keys=[key1, key2])
+    assert entities[0].entity.foo == 123
+    assert entities[1].entity.foo == 456
+    
+    entities = TestHybrid.get_multi(document_ids=[doc1, doc2])
+    assert entities[0].entity.foo == 123
+    assert entities[1].entity.foo == 456
+    

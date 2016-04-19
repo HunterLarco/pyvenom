@@ -164,3 +164,9 @@ class Model(object):
   def get(cls, document_id):
     entity = cls.hybrid_model.get(document_id=document_id)
     return cls._entity_to_model(entity)
+  
+  @classmethod
+  def get_multi(cls, document_ids):
+    hybrid_entities = cls.hybrid_model.get_multi(document_ids=document_ids)
+    entities = map(cls._entity_to_model, hybrid_entities)
+    return entities

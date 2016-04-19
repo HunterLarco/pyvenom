@@ -48,12 +48,15 @@ class Parameter(object):
   def __iter__(self):
     cls = self.__class__
     yield 'type', cls.__name__
-    
+  
     args = self._get_arguments_dict()
     for key, value in args.items():
       yield key, value
-    
+  
     yield 'attributes', self._get_attributes_dict()
+  
+  def __json__(self):
+    return dict(self)
   
   def _get_attributes_dict(self):
     """
@@ -298,12 +301,12 @@ class List(Parameter):
       raise ParameterValidationFailed('ListParameter value length was greater than max')
 
 
-class Model(Integer):
+class Model(Parameter):
   _attributes = Parameter._attributes
   _arguments = Parameter._arguments + ['modelname']
   
   def __init__(self, model, required=True):
-    super(Model, self).__init__(required=required, min=0)
+    super(Model, self).__init__(required=required)
     self.model = model
     self.modelname = model.__name__
   

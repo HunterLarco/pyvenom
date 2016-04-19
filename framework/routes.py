@@ -16,7 +16,7 @@ venom.ui(
 version1.POST('/login', LoginHandler).body({
   'username': venom.Parameters.String(),
   'password': venom.Parameters.String()
-}), 1000)
+}), 'ui-0234789')
 
 
 venom.ui(
@@ -24,7 +24,7 @@ version1.POST('/signup', SignupHandler).body({
   'username': venom.Parameters.String(),
   'password': venom.Parameters.String(),
   'age': venom.Parameters.Integer(required=False, min=0, max=200)
-}), 2000)
+}), 'ui-3456789')
 
 # right now this has an error where it created
 # a new user instead of updating the old one

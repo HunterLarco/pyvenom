@@ -1,0 +1,9 @@
+{
+  "name": "pyvenom",
+  "scripts": {
+    "start": "dev_appserver.py .",
+    "console": "open http://localhost:8000/console",
+    "datastore": "open http://localhost:8000/datastore",
+    "deploy": "appcfg.py update ."
+  }
+}

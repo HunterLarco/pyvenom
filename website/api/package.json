@@ -1,0 +1,10 @@
+{
+  "name": "pyvenom",
+  "scripts": {
+    "start": "dev_appserver.py .",
+    "console": "open http://localhost:8000/console",
+    "datastore": "open http://localhost:8000/datastore",
+    "vendor-install": "pip install -t vendor -r requirements.txt",
+    "deploy": "appcfg.py update ."
+  }
+}

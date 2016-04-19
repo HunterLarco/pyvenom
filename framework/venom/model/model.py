@@ -64,7 +64,7 @@ class ModelSchema(dict):
         property_schema.indexed_datastore,
         property_schema.search
       )
-    return doc
+    return doc[:-1]
 
 
 class Model(object):
@@ -131,10 +131,20 @@ class Model(object):
         prop._set_stored_value(self, value)
   
   def _set_key(self, key):
+    document_id = key.pairs()[0][1]
+    self.key = document_id
     self.hybrid_entity.key = key
-    self.hybrid_entity.document_id = key.pairs()[0][1]
+    self.hybrid_entity.document_id = document_id
   
-  def put(self):
+  def __json__(self):
+    json = {
+      key: prop._get_value(self)
+      for key, prop in self._properties.items()
+    }
+    json['key'] = self.key
+    return json
+  
+  def save(self):
     for key, prop_schema in self._schema.items():
       prop = prop_schema.property
       value = prop._get_stored_value(self)
@@ -143,4 +153,11 @@ class Model(object):
         self.hybrid_entity.set(key, value, field)
       property = prop.to_datastore_property()
       self.hybrid_entity.set(key, value, property)
-    self.hybrid_entity.put()
+    ndb_entity = self.hybrid_entity.put()
+    self._set_key(ndb_entity.key)
+    return self
+  
+  @classmethod
+  def get(cls, document_id):
+    entity = cls.hybrid_model.get(document_id=document_id)
+    return cls._entity_to_model(entity)

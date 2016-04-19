@@ -132,6 +132,7 @@ class HybridModel(object):
       else:
         setattr(entity, key, value)
     entity.put()
+    return entity
   
   @classmethod
   def query_by_search(self, query_string):
@@ -151,3 +152,9 @@ class HybridModel(object):
   def delete(self):
     self.index.delete(self.document_id)
     self.key.delete()
+  
+  @classmethod
+  def get(cls, key=None, document_id=None):
+    if document_id:
+      key = ndb.Key(cls.kind, document_id)
+    return key.get()

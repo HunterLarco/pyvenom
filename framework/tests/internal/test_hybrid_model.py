@@ -179,9 +179,8 @@ class HybridModelTest(BasicTestCase):
     # change ndb
     entity.set('bar', 'bar', ndb.StringProperty)
     
-    document = entity.index.get(entity.document_id)
     assert entity._has_datastore_diff(entity.entity) == True
-    assert entity._has_search_diff(document) == False
+    assert entity._has_search_diff(entity.document) == False
     
     assert entity.put() == True
     assert entity.put() == False
@@ -189,9 +188,8 @@ class HybridModelTest(BasicTestCase):
     # change search api
     entity.set('foo', 124, search.NumberField)
     
-    document = entity.index.get(entity.document_id)
     assert entity._has_datastore_diff(entity.entity) == False
-    assert entity._has_search_diff(document) == True
+    assert entity._has_search_diff(entity.document) == True
     
     assert entity.put() == True
     assert entity.put() == False

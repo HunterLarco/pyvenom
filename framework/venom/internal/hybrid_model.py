@@ -57,13 +57,17 @@ class HybridModel(object):
     cls.model = type(cls.kind, (DynamicModel,), {})
     cls.index = search.Index(name=cls.kind)
   
-  def __init__(self, key=None, document_id=None, entity=None):
+  def __init__(self, key=None, document_id=None, entity=None, document=None):
     super(HybridModel, self).__init__()
     self._search_properties = {}
     self._datastore_properties = {}
     self.key = None
     self.entity = entity
-    if entity:
+    self.document = document
+    if document:
+      self.key = ndb.Key(self.kind, document.id)
+      self.document_id = document.id
+    elif entity:
       self.key = entity.key
       self.document_id = self.key.pairs()[0][1]
     elif key:
@@ -120,6 +124,7 @@ class HybridModel(object):
     self.key = entity_key
     self.document_id = document_id
     self.entity = entity
+    self.document = document
     return True
 
   def _has_search_diff(self, document):
@@ -147,7 +152,7 @@ class HybridModel(object):
   def _put_update(self):
     made_change = False
     
-    document = self.index.get(self.document_id)
+    document = self.index.get(self.document_id) if not self.document else self.document
     if self._has_search_diff(document):
       made_change = True
       fields = document.fields
@@ -157,6 +162,7 @@ class HybridModel(object):
           search_properties[field.name] = field
       document = search.Document(fields=search_properties.values(), doc_id=self.document_id)
       self.index.put(document)
+      self.document = document
     
     entity = self.key.get() if not self.entity else self.entity
     if self._has_datastore_diff(entity):

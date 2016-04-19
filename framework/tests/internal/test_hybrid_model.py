@@ -167,5 +167,31 @@ class HybridModelTest(BasicTestCase):
     entities = TestHybrid.query_by_datastore()
     assert len(entities) == 0
     
+  def test_saving_with_no_diff(self):
+    # initial put
+    entity = TestHybrid()
+    entity.set('foo', 123, ndb.IntegerProperty)
+    entity.set('foo', 123, search.NumberField)
+    entity.set('bar', 'baz', ndb.StringProperty)
+    assert entity.put() == True
+    assert entity.put() == False
     
-
+    # change ndb
+    entity.set('bar', 'bar', ndb.StringProperty)
+    
+    document = entity.index.get(entity.document_id)
+    assert entity._has_datastore_diff(entity.entity) == True
+    assert entity._has_search_diff(document) == False
+    
+    assert entity.put() == True
+    assert entity.put() == False
+    
+    # change search api
+    entity.set('foo', 124, search.NumberField)
+    
+    document = entity.index.get(entity.document_id)
+    assert entity._has_datastore_diff(entity.entity) == False
+    assert entity._has_search_diff(document) == True
+    
+    assert entity.put() == True
+    assert entity.put() == False

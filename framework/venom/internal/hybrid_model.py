@@ -102,8 +102,11 @@ class HybridModel(object):
     return entity
   
   def put(self):
-    if self.key: self._put_update()
-    else: self._put_new()
+    # returns (bool) if saved or skipped
+    # save due to no changes
+    if self.key:
+      return self._put_update()
+    return self._put_new()
   
   def _put_new(self):
     document = self._to_search_document()
@@ -117,26 +120,55 @@ class HybridModel(object):
     self.key = entity_key
     self.document_id = document_id
     self.entity = entity
-    return entity
+    return True
+
+  def _has_search_diff(self, document):
+    fields = {
+      field.name: field
+      for field in document.fields
+    }
+    for key, prop in self._search_properties.items():
+      if not key in fields:
+        return True
+      field_value = fields[key].value
+      if not field_value == prop.value:
+        return True
+    return False
   
+  def _has_datastore_diff(self, entity):
+    for key, (prop_value, prop) in self._datastore_properties.items():
+      if not hasattr(entity, key):
+        return True
+      entity_value = getattr(entity, key)
+      if not entity_value == prop_value:
+        return True
+    return False
+
   def _put_update(self):
+    made_change = False
+    
     document = self.index.get(self.document_id)
-    fields = document.fields
-    search_properties = { key: value for key, value in self._search_properties.items() }
-    for field in fields:
-      if not field.name in search_properties:
-        search_properties[field.name] = field
-    document = search.Document(fields=search_properties.values(), doc_id=self.document_id)
-    self.index.put(document)
+    if self._has_search_diff(document):
+      made_change = True
+      fields = document.fields
+      search_properties = { key: value for key, value in self._search_properties.items() }
+      for field in fields:
+        if not field.name in search_properties:
+          search_properties[field.name] = field
+      document = search.Document(fields=search_properties.values(), doc_id=self.document_id)
+      self.index.put(document)
     
     entity = self.key.get() if not self.entity else self.entity
-    for key, (value, prop) in self._datastore_properties.items():
-      if not hasattr(entity, key):
-        entity.set(key, value, prop)
-      else:
-        setattr(entity, key, value)
-    entity.put()
-    return entity
+    if self._has_datastore_diff(entity):
+      made_change = True
+      for key, (value, prop) in self._datastore_properties.items():
+        if not hasattr(entity, key):
+          entity.set(key, value, prop)
+        else:
+          setattr(entity, key, value)
+      entity.put()
+    
+    return made_change
   
   @classmethod
   def query_by_search(self, query_string):

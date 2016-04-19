@@ -301,12 +301,12 @@ class List(Parameter):
       raise ParameterValidationFailed('ListParameter value length was greater than max')
 
 
-class Model(Integer):
+class Model(Parameter):
   _attributes = Parameter._attributes
   _arguments = Parameter._arguments + ['modelname']
   
   def __init__(self, model, required=True):
-    super(Model, self).__init__(required=required, min=0)
+    super(Model, self).__init__(required=required)
     self.model = model
     self.modelname = model.__name__
   

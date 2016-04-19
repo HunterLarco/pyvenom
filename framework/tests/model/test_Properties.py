@@ -5,6 +5,139 @@ import venom
 
 
 class BasePropertyTest(BasicTestCase):
+  def test_model_property(self):
+    class InnerModel(venom.Model):
+      name = venom.Properties.String()
+    
+    class TestModel(venom.Model):
+      inner = venom.Properties.Model(InnerModel)
+    
+    inner = InnerModel(name='test').save()
+    test = TestModel(inner=inner).save()
+    
+    # test that model is stored internally (not key)
+    assert test.inner == inner
+    assert test._values['inner'] == inner
+    
+    test = TestModel.get(test.key)
+    
+    # test that key only is loaded from db
+    assert test._values['inner'] == inner.key
+    
+    # test lazy loaded model upon key access
+    assert isinstance(test.inner, InnerModel)
+    assert test._values['inner'] != inner.key
+  
+  def test_password_property(self):
+    self.__test_string_property(venom.Properties.Password)
+    
+    class ModelStub(venom.Model):
+      prop = venom.Properties.Password()
+    
+    model = ModelStub()
+    model.prop = 'test'
+    
+    # stored as hash
+    assert model.prop != 'test'
+    assert len(model.prop) == 64
+    
+    # to storage changes to hash but from storage doesn't
+    assert ModelStub.prop._to_storage('test') != 'test'
+    assert ModelStub.prop._from_storage('test') == 'test'
+    
+    # get stored value doesn't re-hash
+    assert ModelStub.prop._get_stored_value(model) == model.prop
+  
+  def test_string_property(self):
+    self.__test_string_property(venom.Properties.String)
+  
+  def __test_string_property(self, prop_cls):
+    prop = prop_cls(min=2, max=8, choices=['foo', 'bar', 'baz'], required=True, characters='fobar')
+    
+    assert prop.min == 2
+    assert prop.max == 8
+    assert prop.choices == ['foo', 'bar', 'baz']
+    assert prop.required == True
+    assert prop.characters == 'fobar'
+    
+    with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
+      prop.validate('a')
+      prop.validate('foobar')
+      prop.validate('baz')
+      prop.validate('aaaaaaaaa')
+    with smart_assert.raises() as context:
+      prop.validate('foo')
+      prop.validate(u'bar')
+      
+    assert isinstance(prop._from_storage(unicode('bar')), str)
+  
+  def test_float_property(self):
+    prop = venom.Properties.Float(min=2, max=8, choices=[1, 3.5, 4, 9], required=True)
+    
+    assert prop.min == 2
+    assert prop.max == 8
+    assert prop.choices == [1, 3.5, 4, 9]
+    assert prop.required == True
+    
+    with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
+      prop.validate(1)
+      prop.validate(3)
+      prop.validate(9)
+    with smart_assert.raises() as context:
+      prop.validate(3.5)
+      prop.validate(4)
+    
+    assert prop._from_storage(4.000001) == 4.000001
+    
+    assert prop.to_search_field() == search.NumberField
+    assert prop.to_datastore_property() == ndb.FloatProperty
+  
+  def test_integer_property(self):
+    prop = venom.Properties.Integer(min=2, max=8, choices=[1, 3, 4, 9], required=True)
+    
+    assert prop.min == 2
+    assert prop.max == 8
+    assert prop.choices == [1, 3, 4, 9]
+    assert prop.required == True
+    
+    with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
+      prop.validate(1)
+      prop.validate(9)
+    with smart_assert.raises() as context:
+      prop.validate(3)
+      prop.validate(4)
+    
+    assert prop._from_storage(4.000001) == 4
+    
+    assert prop.to_search_field() == search.NumberField
+    assert prop.to_datastore_property() == ndb.IntegerProperty
+  
+  def test_choices_property(self):
+    prop = venom.Properties.ChoicesProperty(choices=[1, 2, 3, '4'])
+    
+    with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
+      prop.validate(4)
+      prop.validate(None)
+    with smart_assert.raises() as context:
+      prop.validate(1)
+      prop.validate(2)
+      prop.validate(3)
+      prop.validate('4')
+  
+  def test_validate_on_set(self):
+    class ModelStub(venom.Model):
+      prop = venom.Properties.Property(required=True)
+    
+    with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
+      model = ModelStub()
+      model.prop = None
+    
+    class ModelStub(venom.Model):
+      prop = venom.Properties.Property(required=False)
+    
+    model = ModelStub()
+    model.prop = None
+  
   def test_invalid_comparison(self):
     prop = venom.Properties.Property()
     with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
@@ -52,39 +185,6 @@ class BasePropertyTest(BasicTestCase):
       prop != 1
     with smart_assert.raises(venom.Properties.InvalidPropertyComparison) as context:
       prop.contains(1)
-  
-  def test_uses_datastore_method(self):
-    class TestProp(venom.Properties.Property):
-      allowed_operators = venom.Properties.PropertyComparison.allowed_operators
-      
-      def query_uses_datastore(self, operator, value):
-        return operator == venom.Properties.PropertyComparison.EQ
-      
-      def to_search_field(self, operator, value):
-        return 'search'
-  
-      def to_datastore_property(self):
-        return 'datastore'
-    
-    prop = TestProp()
-    with smart_assert.raises() as context:
-      prop == 1
-    
-    assert prop.search == False
-    assert prop.datastore == True
-    assert prop.compared == True
-    assert prop.search_fields == set()
-    
-    # TODO test prop.to_datastore_property()
-    
-    prop < 4
-    
-    assert prop.search == True
-    assert prop.datastore == True
-    assert prop.compared == True
-    assert prop.search_fields == set(['search'])
-    
-    # TODO test prop.to_datastore_property()
   
   def test_base_validatation(self):
     class TestProp(venom.Properties.Property):

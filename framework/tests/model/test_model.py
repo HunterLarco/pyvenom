@@ -74,7 +74,7 @@ class ModelTest(BasicTestCase):
     assert test.foo == 5
     assert test.bar == 13
   
-  def test_saving_data(self):
+  def test_saving_and_updating(self):
     class TestProp(venom.Properties.Property):
       allowed_operators = venom.Properties.PropertyComparison.allowed_operators
       
@@ -100,7 +100,7 @@ class ModelTest(BasicTestCase):
     test = Test()
     test.foo = 10
     test.bar = 24
-    test.put()
+    test.save()
     
     entities = test.hybrid_model.query_by_datastore()
     assert len(entities) == 1
@@ -117,7 +117,7 @@ class ModelTest(BasicTestCase):
     assert entity.bar == 24
     
     entity.foo = 34
-    entity.put()
+    entity.save()
     
     entities = Test.foo10()
     assert len(entities) == 0
@@ -128,3 +128,88 @@ class ModelTest(BasicTestCase):
     entity = entities[0]
     assert entity.foo == 34
     assert entity.bar == 24
+
+  def test_schema(self):
+    class User(venom.Model):
+      username = venom.Properties.String()
+      email = venom.Properties.String()
+      age = venom.Properties.Float()
+      password = venom.Properties.Password(min=5)
+      bio = venom.Properties.String(max=None)
+
+      login = venom.Query(email == venom.QP, password == venom.QP)
+    
+    def assert_schema(model, prop_name, datastore, indexed_datastore, search):
+      assert model._schema[prop_name].datastore == datastore
+      assert model._schema[prop_name].indexed_datastore == indexed_datastore
+      assert model._schema[prop_name].search == search
+    
+    assert_schema(User, 'username', True, False, False)
+    assert_schema(User, 'email'   , True, True , False)
+    assert_schema(User, 'age'     , True, False, False)
+    assert_schema(User, 'password', True, True , False)
+    assert_schema(User, 'bio'     , True, False, False)
+    
+    User.bio_contains = venom.Query(User.bio.contains(venom.QP))
+    User._init_class()
+    
+    assert_schema(User, 'username', True, False, False)
+    assert_schema(User, 'email'   , True, True , False)
+    assert_schema(User, 'age'     , True, False, False)
+    assert_schema(User, 'password', True, True , False)
+    assert_schema(User, 'bio'     , True, False, True )
+    
+    User.bio_contains = venom.Query(User.bio.contains(venom.QP), User.email == 'foo')
+    User._init_class()
+    
+    assert_schema(User, 'username', True, False, False)
+    assert_schema(User, 'email'   , True, True , True )
+    assert_schema(User, 'age'     , True, False, False)
+    assert_schema(User, 'password', True, True , False)
+    assert_schema(User, 'bio'     , True, False, True )
+    
+    User.bio_contains = venom.Query(User.age > 5, User.email != 'foo')
+    User._init_class()
+    
+    assert_schema(User, 'username', True, False, False)
+    assert_schema(User, 'email'   , True, True , True )
+    assert_schema(User, 'age'     , True, False, True )
+    assert_schema(User, 'password', True, True , False)
+    assert_schema(User, 'bio'     , True, False, False)
+  
+  def test_json(self):
+    class User(venom.Model):
+      username = venom.Properties.String()
+      email = venom.Properties.String()
+      age = venom.Properties.Float()
+      password = venom.Properties.String(min=3)
+      bio = venom.Properties.String(max=None)
+    
+    user = User(username='username', email='email', age=20, password='pass', bio='bio')
+    json = user.__json__()
+    
+    assert json['username'] == 'username'
+    assert json['email'] == 'email'
+    assert json['age'] == 20
+    assert json['password'] == 'pass'
+    assert json['bio'] == 'bio'
+    assert json['key'] == None
+  
+  def test_key_update(self):
+    class User(venom.Model):
+      username = venom.Properties.String()
+      email = venom.Properties.String()
+      age = venom.Properties.Float()
+      password = venom.Properties.Password(min=3)
+      bio = venom.Properties.String(max=None)
+    
+    user = User(username='username', email='email', age=20, password='pass', bio='bio')
+    
+    assert user.key == None
+    user.save()
+    assert user.key != None
+    
+    # check that key didn't change on a class level (for all instances)
+    user = User()
+    assert user.key == None
+    

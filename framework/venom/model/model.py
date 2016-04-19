@@ -14,6 +14,59 @@ class MetaModel(type):
     cls._init_class()
 
 
+class PropertySchema(object):
+  def __init__(self, property, datastore=False, search=False, indexed_datastore=False):
+    self.property = property
+    self.datastore = datastore
+    self.search = search
+    self.indexed_datastore = indexed_datastore
+  
+  def __repr__(self):
+    return 'PropertySchema({}, datastore={}, search={}, indexed_datastore={})'.format(
+      self.property,
+      self.datastore,
+      self.search,
+      self.indexed_datastore
+    )
+
+
+class ModelSchema(dict):
+  def __init__(self, properties, queries):
+    schema = self._build_schema(properties, queries)
+    super(ModelSchema, self).__init__(schema)
+  
+  def _build_schema(self, properties, queries):
+    schema = {
+      name: PropertySchema(prop, datastore=True)
+      for name, prop in properties.items()
+    }
+    
+    for _, query in queries.items():
+      comparisons = query.get_property_comparisons()
+      uses_datastore = query.uses_datastore()
+      for comparison in comparisons:
+        prop_name = comparison.property._name
+        if uses_datastore:
+          schema[prop_name].indexed_datastore = True
+        else:
+          schema[prop_name].search = True
+    
+    return schema
+  
+  def to_table(self):
+    template = '{:>13} | {!s:>9} | {!s:>7} | {!s:>10}\n'
+    doc = template.format('Property Name', 'Datastore', 'Indexed', 'Search API')
+    doc += template.format('-------------', '---------', '-------', '----------')
+    for name, property_schema in self.items():
+      doc += template.format(
+        name,
+        property_schema.datastore,
+        property_schema.indexed_datastore,
+        property_schema.search
+      )
+    return doc[:-1]
+
+
 class Model(object):
   __metaclass__ = MetaModel
   
@@ -28,10 +81,12 @@ class Model(object):
     cls.hybrid_model = type(cls.kind, (HybridModel,), {})
     cls._properties = ModelAttribute.connect(cls, kind=Property)
     cls._queries = ModelAttribute.connect(cls, kind=Query)
+    cls._schema = ModelSchema(cls._properties, cls._queries)
   
   def __init__(self, **kwargs):
     super(Model, self).__init__()
     self.hybrid_entity = self.hybrid_model()
+    self.key = None
     self._connect_properties()
     self._connect_queries()
     self.populate(**kwargs)
@@ -77,15 +132,33 @@ class Model(object):
         prop._set_stored_value(self, value)
   
   def _set_key(self, key):
+    document_id = key.pairs()[0][1]
+    self.key = document_id
     self.hybrid_entity.key = key
-    self.hybrid_entity.document_id = key.pairs()[0][1]
+    self.hybrid_entity.document_id = document_id
   
-  def put(self):
-    for key, prop in self._properties.items():
+  def __json__(self):
+    json = {
+      key: prop._get_value(self)
+      for key, prop in self._properties.items()
+    }
+    json['key'] = self.key
+    return json
+  
+  def save(self):
+    for key, prop_schema in self._schema.items():
+      prop = prop_schema.property
       value = prop._get_stored_value(self)
-      if prop.search:
-        for field in prop.search_fields:
-          self.hybrid_entity.set(key, value, field)
+      if prop_schema.search and value != None:
+        field = prop.to_search_field()
+        self.hybrid_entity.set(key, value, field)
       property = prop.to_datastore_property()
       self.hybrid_entity.set(key, value, property)
-    self.hybrid_entity.put()
+    ndb_entity = self.hybrid_entity.put()
+    self._set_key(ndb_entity.key)
+    return self
+  
+  @classmethod
+  def get(cls, document_id):
+    entity = cls.hybrid_model.get(document_id=document_id)
+    return cls._entity_to_model(entity)

@@ -5,6 +5,9 @@ import glob
 # vendor imports
 import yaml as pyyaml
 
+# package imports
+from builtin_file import bfile
+
 
 __all__  = ['IndexYaml', 'IndexYamlFromFile', 'IndexGenerator']
 __all__ += ['update_index_yaml']
@@ -15,9 +18,6 @@ def update_index_yaml(models):
   if not is_dev:
     return False
   
-  old = file.ALLOWED_MODES
-  file.ALLOWED_MODES = ['w+', 'r']
-  
   index = ''
   if os.path.isfile('index.yaml'):
     with open('index.yaml', 'r') as f:
@@ -25,10 +25,8 @@ def update_index_yaml(models):
   
   schemas = map(lambda model: model._schema, models)
   generator = IndexGenerator(yaml=index, schemas=schemas)
-  with open('index.yaml', 'w+') as f:
+  with bfile('index.yaml', 'w+') as f:
     f.write(str(generator))
-  
-  file.ALLOWED_MODES = old
   
   return True
 
@@ -59,9 +57,7 @@ class IndexYaml(object):
       model
       for model in yaml['indexes']
       if model['properties']
-    ]
-    
-      
+    ] 
   
   def validate(self):
     self._validate_root()

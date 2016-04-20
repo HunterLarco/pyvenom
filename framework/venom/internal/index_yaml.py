@@ -1,6 +1,5 @@
 # system imports
 import os
-import glob
 
 # vendor imports
 import yaml as pyyaml
@@ -131,7 +130,7 @@ class IndexYaml(object):
 class IndexYamlFromFile(IndexYaml):
   venom_marker = '# VENOM INDEXES\n'
   venom_info = """\n# This index.yaml is automatically updated whenever the venom framework
-# detects a schema change.  If you want to manage the index.yaml file
+# detects a schema change. If you want to manage the index.yaml file
 # manually, remove the above marker line (the line saying "# VENOM INDEXES").
 # If you want to manage some indexes manually, move them above the marker line.
 # The index.yaml file is automatically uploaded to the admin console when
@@ -176,9 +175,11 @@ class IndexYamlFromFile(IndexYaml):
     
     
 class IndexGenerator(object):
+  yaml_parser = IndexYamlFromFile
+  
   def __init__(self, yaml=None, schemas=None):
     super(IndexGenerator, self).__init__()
-    self.yaml = IndexYamlFromFile(yaml)
+    self.yaml = self.yaml_parser(yaml)
     self.index = {
       model['kind']: model
       for model in self.yaml['indexes']
@@ -193,26 +194,25 @@ class IndexGenerator(object):
       return
     self._insert_schema(schema)
 
+  def _get_properties_from_schema(self, schema):
+    return [
+      { 'name': name }
+      for name, prop_schema in schema.items()
+      if prop_schema.datastore and prop_schema.indexed_datastore
+    ]
+
   def _update_schema(self, schema):
     kind = schema._model.kind
     model = self.index[kind]
     if 'ancestor' in model:
       del model['ancestor']
-    model['properties'] = [
-      { 'name': name }
-      for name, prop_schema in schema.items()
-      if prop_schema.datastore and prop_schema.indexed_datastore
-    ]
+    model['properties'] = self._get_properties_from_schema(schema)
   
   def _insert_schema(self, schema):
     kind = schema._model.kind
     model = {
       'kind': kind,
-      'properties': [
-        { 'name': name }
-        for name, prop_schema in schema.items()
-        if prop_schema.datastore and prop_schema.indexed_datastore
-      ]
+      'properties': self._get_properties_from_schema(schema)
     }
     self.yaml['indexes'].append(model)
     self.index[kind] = model

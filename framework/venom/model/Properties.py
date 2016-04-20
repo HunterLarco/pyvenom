@@ -254,6 +254,10 @@ class String(ChoicesProperty):
 
 
 class Password(String):
+  allowed_operators = frozenset({
+    PropertyComparison.EQ
+  })
+  
   def _hash(self, value):
     import hashlib
     return hashlib.sha256(value).hexdigest()
@@ -270,6 +274,10 @@ class Password(String):
 
 
 class Model(Property):
+  allowed_operators = frozenset({
+    PropertyComparison.EQ
+  })
+  
   def __init__(self, model, required=False):
     super(Model, self).__init__(required=required)
     self.model = model

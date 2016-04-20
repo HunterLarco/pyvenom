@@ -39,8 +39,9 @@ class PropertySchema(object):
 
 
 class ModelSchema(dict):
-  def __init__(self, properties, queries):
+  def __init__(self, model, properties, queries):
     schema = self._build_schema(properties, queries)
+    self._model = model
     super(ModelSchema, self).__init__(schema)
   
   def __eq__(self, value):
@@ -98,7 +99,7 @@ class Model(object):
     cls.hybrid_model = type(cls.kind, (HybridModel,), {})
     cls._properties = ModelAttribute.connect(cls, kind=Property)
     cls._queries = ModelAttribute.connect(cls, kind=Query)
-    cls._schema = ModelSchema(cls._properties, cls._queries)
+    cls._schema = ModelSchema(cls, cls._properties, cls._queries)
   
   def __init__(self, **kwargs):
     super(Model, self).__init__()

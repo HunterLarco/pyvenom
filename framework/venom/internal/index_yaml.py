@@ -26,16 +26,14 @@ def update_index_yaml(models):
   schemas = map(lambda model: model._schema, models)
   generator = IndexGenerator(yaml=index, schemas=schemas)
   with bfile('index.yaml', 'w+') as f:
-    f.write(str(generator))
+    f.write(generator.generate())
   
   return True
 
 
 class IndexYaml(object):
   def __init__(self, yaml):
-    if not yaml:
-      yaml = ''
-    yaml = pyyaml.load(yaml)
+    yaml = pyyaml.load(yaml if yaml else '')
     if not yaml:
       yaml = { 'indexes': [] }
     elif not 'indexes' in yaml or not yaml['indexes']:
@@ -44,12 +42,25 @@ class IndexYaml(object):
     self.yaml = yaml
     self.validate()
   
+  def __iter__(self):
+    return iter(self.yaml)
+  
+  def __getitem__(self, key):
+    return self.yaml[key]
+  
+  def __delitem__(self, key):
+    del self.yaml[key]
+  
+  def __setitem__(self, key, value):
+    self.yaml[key] = value
+  
   def __str__(self):
     cleaned_yaml = self._clean_yaml(self.yaml)
     if not cleaned_yaml:
       return ''
-    yaml = pyyaml.safe_dump(cleaned_yaml, allow_unicode=True, default_flow_style=False)
-    yaml = yaml.replace('- kind:', '\n- kind:')
+    sorted_yaml = self._sort_yaml(cleaned_yaml)
+    yaml = pyyaml.safe_dump(sorted_yaml, allow_unicode=True, default_flow_style=False)
+    yaml = yaml.replace('- kind:', '\n- kind:').strip()
     return yaml
   
   def _clean_yaml(self, yaml):
@@ -57,7 +68,13 @@ class IndexYaml(object):
       model
       for model in yaml['indexes']
       if model['properties']
-    ] 
+    ]
+  
+  def _sort_yaml(self, cleaned_yaml):
+    models = cleaned_yaml[:]
+    for model in models:
+      model['properties'] = sorted(model['properties'], key=lambda prop: prop['name'])
+    return sorted(models, key=lambda model: model['kind'])
   
   def validate(self):
     self._validate_root()
@@ -127,7 +144,7 @@ class IndexYamlFromFile(IndexYaml):
     self.manual = manual.strip()
     if not self.manual:
       self.manual = 'indexes:'
-    venom = 'indexes:' + venom if venom else None
+    venom = 'indexes:\n' + venom if venom else None
     super(IndexYamlFromFile, self).__init__(venom)
   
   def _slice_yaml(self, yaml):
@@ -149,20 +166,13 @@ class IndexYamlFromFile(IndexYaml):
     automatic = yaml[datastore_marker_index + len(self.datastore_marker):]
     return manual, venom, automatic
   
-  def __getitem__(self, key):
-    return self.yaml[key]
-  
-  def __delitem__(self, key):
-    del self.yaml[key]
-  
-  def __setitem__(self, key, value):
-    self.yaml[key] = value
-  
   def __str__(self):
-    return '{}\n\n{}{}{}\n{}\n{}'.format(
+    string = '{}\n\n{}{}\n{}'.format(
       self.manual,
-      self.venom_marker, self.venom_info, super(IndexYamlFromFile, self).__str__(),
-      self.datastore_marker, self.automatic)
+      self.venom_marker, self.venom_info, super(IndexYamlFromFile, self).__str__())
+    if self.automatic:
+      string += '\n\n{}\n{}'.format(self.datastore_marker, self.automatic)
+    return string
     
     
 class IndexGenerator(object):
@@ -207,5 +217,5 @@ class IndexGenerator(object):
     self.yaml['indexes'].append(model)
     self.index[kind] = model
   
-  def __str__(self):
+  def generate(self):
     return str(self.yaml)

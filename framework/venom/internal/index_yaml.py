@@ -1,8 +1,36 @@
+# system imports
+import os
+import glob
+
 # vendor imports
 import yaml as pyyaml
 
 
-__all__ = ['IndexYaml', 'IndexGenerator']
+__all__  = ['IndexYaml', 'IndexYamlFromFile', 'IndexGenerator']
+__all__ += ['update_index_yaml']
+
+
+def update_index_yaml(models):
+  is_dev = os.environ.get('SERVER_SOFTWARE','').startswith('Development')
+  if not is_dev:
+    return False
+  
+  old = file.ALLOWED_MODES
+  file.ALLOWED_MODES = ['w+', 'r']
+  
+  index = ''
+  if os.path.isfile('index.yaml'):
+    with open('index.yaml', 'r') as f:
+      index = f.read()
+  
+  schemas = map(lambda model: model._schema, models)
+  generator = IndexGenerator(yaml=index, schemas=schemas)
+  with open('index.yaml', 'w+') as f:
+    f.write(str(generator))
+  
+  file.ALLOWED_MODES = old
+  
+  return True
 
 
 class IndexYaml(dict):
@@ -26,7 +54,10 @@ class IndexYaml(dict):
     models = self['indexes']
     dumps = []
     for model in models:
-      dumps.append(self._dump_model(model))
+      dumped_model = self._dump_model(model)
+      if not dumped_model:
+        continue
+      dumps.append(dumped_model)
     return '\n\n'.join(dumps)
   
   def _dump_model(self, model):
@@ -38,7 +69,10 @@ class IndexYaml(dict):
       ancestor_str = 'yes' if ancestor else 'no'
       yaml += '  ancestor: {}\n'.format(ancestor_str)
     yaml += '  properties:\n'
-    yaml += self._dump_properties(properties)
+    dumped_properties = self._dump_properties(properties)
+    if not dumped_properties:
+      return None
+    yaml += dumped_properties
     return yaml
   
   def _dump_properties(self, properties):
@@ -83,7 +117,7 @@ class IndexYaml(dict):
     if not 'properties' in model:
       raise Exception('Invalid Index YAML: Expected "properties" in model')
     if not isinstance(model['properties'], list):
-      raise Exception('Invalid Index YAML: "kind" variable must be a list')
+      raise Exception('Invalid Index YAML: "properties" variable must be a list')
     if 'ancestor' in model:
       if not isinstance(model['ancestor'], bool):
         raise Exception('Invalid Index YAML: "ancestor" variable must be a bool')
@@ -116,14 +150,17 @@ class IndexYamlFromFile(IndexYaml):
     manual, venom, automatic = self._slice_yaml(yaml)
     self.automatic = automatic.strip()
     self.manual = manual.strip()
-    super(IndexYamlFromFile, self).__init__('indexes:' + venom)
+    if not self.manual:
+      self.manual = 'indexes:'
+    venom = 'indexes:' + venom if venom else None
+    super(IndexYamlFromFile, self).__init__(venom)
   
   def _slice_yaml(self, yaml):
     venom_marker_index = yaml.find(self.venom_marker)
     datastore_marker_index = yaml.find(self.datastore_marker)
     
     if venom_marker_index == -1 and datastore_marker_index == -1:
-      return yaml, None, None
+      return yaml, '', ''
     elif venom_marker_index > -1 and datastore_marker_index == -1:
       datastore_marker_index = len(yaml)
     elif venom_marker_index == -1 and datastore_marker_index > -1:

@@ -1,5 +1,6 @@
 # package imports
 from ..internal.hybrid_model import HybridModel
+from ..internal.index_yaml import update_index_yaml
 from attribute import ModelAttribute
 from Properties import Property
 from query import Query
@@ -12,6 +13,7 @@ class MetaModel(type):
   def __init__(cls, name, bases, classdict):
     super(MetaModel, cls).__init__(name, bases, classdict)
     cls._init_class()
+    update_index_yaml([cls])
 
 
 class PropertySchema(object):

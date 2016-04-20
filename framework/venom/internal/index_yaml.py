@@ -33,7 +33,7 @@ def update_index_yaml(models):
   return True
 
 
-class IndexYaml(dict):
+class IndexYaml(object):
   def __init__(self, yaml):
     if not yaml:
       yaml = ''
@@ -42,68 +42,42 @@ class IndexYaml(dict):
       yaml = { 'indexes': [] }
     elif not 'indexes' in yaml or not yaml['indexes']:
       yaml['indexes'] = []
-    super(IndexYaml, self).__init__(yaml)
+    super(IndexYaml, self).__init__()
+    self.yaml = yaml
     self.validate()
   
   def __str__(self):
-    dumped_models = self._dump_models()
-    yaml = 'indexes:\n\n{}'.format(dumped_models)
+    cleaned_yaml = self._clean_yaml(self.yaml)
+    if not cleaned_yaml:
+      return ''
+    yaml = pyyaml.safe_dump(cleaned_yaml, allow_unicode=True, default_flow_style=False)
+    yaml = yaml.replace('- kind:', '\n- kind:')
     return yaml
   
-  def _dump_models(self):
-    models = self['indexes']
-    dumps = []
-    for model in models:
-      dumped_model = self._dump_model(model)
-      if not dumped_model:
-        continue
-      dumps.append(dumped_model)
-    return '\n\n'.join(dumps)
-  
-  def _dump_model(self, model):
-    kind = model['kind']
-    properties = model['properties']
-    yaml = '- kind: {}\n'.format(kind)
-    if 'ancestor' in model:
-      ancestor = model['ancestor']
-      ancestor_str = 'yes' if ancestor else 'no'
-      yaml += '  ancestor: {}\n'.format(ancestor_str)
-    yaml += '  properties:\n'
-    dumped_properties = self._dump_properties(properties)
-    if not dumped_properties:
-      return None
-    yaml += dumped_properties
-    return yaml
-  
-  def _dump_properties(self, properties):
-    dumps = []
-    for prop in properties:
-      dumps.append(self._dump_property(prop))
-    return '\n'.join(dumps)
-  
-  def _dump_property(self, prop):
-    name = prop['name']
-    yaml = '  - name: {}'.format(name)
-    if 'direction' in prop:
-      direction = prop['direction']
-      yaml += '\n    direction: {}'.format(direction)
-    return yaml
+  def _clean_yaml(self, yaml):
+    return [
+      model
+      for model in yaml['indexes']
+      if model['properties']
+    ]
+    
+      
   
   def validate(self):
     self._validate_root()
     self._validate_models()
   
   def _validate_root(self):
-    if not isinstance(self, dict):
+    if not isinstance(self.yaml, dict):
       raise Exception('Invalid Index YAML: root must be a dict')
-    if not 'indexes' in self:
+    if not 'indexes' in self.yaml:
       raise Exception('Invalid Index YAML: Expected "indexes" in root')
-    indexes = self['indexes']
+    indexes = self.yaml['indexes']
     if not isinstance(indexes, list):
       raise Exception('Invalid Index YAML: "indexes" variable must be a list')
   
   def _validate_models(self):
-    models = self['indexes']
+    models = self.yaml['indexes']
     for model in models:
       self._validate_model(model)
   
@@ -179,19 +153,29 @@ class IndexYamlFromFile(IndexYaml):
     automatic = yaml[datastore_marker_index + len(self.datastore_marker):]
     return manual, venom, automatic
   
+  def __getitem__(self, key):
+    return self.yaml[key]
+  
+  def __delitem__(self, key):
+    del self.yaml[key]
+  
+  def __setitem__(self, key, value):
+    self.yaml[key] = value
+  
   def __str__(self):
-    return '{}\n\n{}{}\n{}\n\n{}\n{}'.format(
+    return '{}\n\n{}{}{}\n{}\n{}'.format(
       self.manual,
-      self.venom_marker, self.venom_info, super(IndexYamlFromFile, self)._dump_models(),
+      self.venom_marker, self.venom_info, super(IndexYamlFromFile, self).__str__(),
       self.datastore_marker, self.automatic)
     
     
-class IndexGenerator(IndexYamlFromFile):
+class IndexGenerator(object):
   def __init__(self, yaml=None, schemas=None):
-    super(IndexGenerator, self).__init__(yaml)
+    super(IndexGenerator, self).__init__()
+    self.yaml = IndexYamlFromFile(yaml)
     self.index = {
       model['kind']: model
-      for model in self['indexes']
+      for model in self.yaml['indexes']
     }
     for schema in schemas:
       self.add_schema(schema)
@@ -224,5 +208,8 @@ class IndexGenerator(IndexYamlFromFile):
         if prop_schema.datastore and prop_schema.indexed_datastore
       ]
     }
-    self['indexes'].append(model)
+    self.yaml['indexes'].append(model)
     self.index[kind] = model
+  
+  def __str__(self):
+    return str(self.yaml)

@@ -26,6 +26,15 @@ class Property(ModelAttribute):
     super(Property, self).__init__()
     self.required = required
   
+  def __equals__(self, value):
+    cls = self.__class__
+    if not isinstance(value, cls):
+      raise Exception('Can only call Property.__equals__ with a Property instance')
+    return (
+      self._name == value._name and
+      self._model is value._model
+    )
+  
   def _connect(self, entity=None, name=None, model=None):
     super(Property, self)._connect(entity=entity, name=name, model=model)
     if entity and not hasattr(entity, '_values'):

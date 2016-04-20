@@ -21,6 +21,14 @@ class PropertySchema(object):
     self.search = search
     self.indexed_datastore = indexed_datastore
   
+  def __eq__(self, value):
+    return (
+      self.property.__equals__(value.property) and
+      self.search == value.search and
+      self.datastore == value.datastore and
+      self.indexed_datastore == value.indexed_datastore
+    )
+  
   def __repr__(self):
     return 'PropertySchema({}, datastore={}, search={}, indexed_datastore={})'.format(
       self.property,
@@ -34,6 +42,15 @@ class ModelSchema(dict):
   def __init__(self, properties, queries):
     schema = self._build_schema(properties, queries)
     super(ModelSchema, self).__init__(schema)
+  
+  def __eq__(self, value):
+    if set(self.keys()) != set(value.keys()):
+      return False
+    for key, prop_schema in self.items():
+      value_prop_schema = value[key]
+      if not prop_schema == value_prop_schema:
+        return False
+    return True
   
   def _build_schema(self, properties, queries):
     schema = {

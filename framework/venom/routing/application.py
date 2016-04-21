@@ -1,5 +1,6 @@
 # system imports
 from collections import defaultdict
+import inspect
 
 # package imports
 import routes
@@ -36,6 +37,9 @@ def generate_meta_handler(app):
             'body': self._removenull(dict(route._body)),
             'methods': list(route.allowed_methods),
             'ui.guid': ui.get_guid(route),
+            'ui.handler_name': route.handler.__name__,
+            'ui.handler_file': inspect.getsourcefile(route.handler),
+            'ui.handler_body': ''.join(inspect.getsourcelines(route.handler)[0]),
             'path': route.path
           })
       return meta

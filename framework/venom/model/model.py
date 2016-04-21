@@ -136,7 +136,7 @@ class Model(object):
   
   @classmethod
   def _entity_to_model(cls, hybrid_entity):
-    ndb_entity = hybrid_entity.entity
+    ndb_entity = hybrid_entity.datastore_entity
     properties = {name: prop._get_value(ndb_entity) for name, prop in ndb_entity._properties.items()}
     entity = cls()
     entity._populate_from_stored(**properties)
@@ -169,15 +169,19 @@ class Model(object):
     json['key'] = self.key
     return json
   
-  def save(self):
-    for key, prop_schema in self._schema.items():
+  @classmethod
+  def _set_hybrid_entity_values(cls, entity):
+    for key, prop_schema in entity._schema.items():
       prop = prop_schema.property
-      value = prop._get_stored_value(self)
+      value = prop._get_stored_value(entity)
       if prop_schema.search and value != None:
         field = prop.to_search_field()
-        self.hybrid_entity.set(key, value, field)
+        entity.hybrid_entity.set(key, value, field)
       property = prop.to_datastore_property()
-      self.hybrid_entity.set(key, value, property)
+      entity.hybrid_entity.set(key, value, property)
+  
+  def save(self):
+    self._set_hybrid_entity_values(self)
     self.hybrid_entity.put()
     self.key = self.hybrid_entity.document_id
     return self
@@ -192,3 +196,14 @@ class Model(object):
     hybrid_entities = cls.hybrid_model.get_multi(document_ids=document_ids)
     entities = map(cls._entity_to_model, hybrid_entities)
     return entities
+  
+  @classmethod
+  def save_multi(cls, entities):
+    hybrid_entities = []
+    for entity in entities:
+      cls._set_hybrid_entity_values(entity)
+      hybrid_entities.append(entity.hybrid_entity)
+    cls.hybrid_model.put_multi(hybrid_entities)
+    for entity in entities:
+      entity.key = entity.hybrid_entity.document_id
+      

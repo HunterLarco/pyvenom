@@ -1,3 +1,6 @@
+# system imports
+import inspect
+
 # package imports
 from ..internal.hybrid_model import HybridModel
 from ..internal.index_yaml import update_index_yaml
@@ -136,7 +139,7 @@ class Model(object):
   
   @classmethod
   def _entity_to_model(cls, hybrid_entity):
-    ndb_entity = hybrid_entity.datastore_entity
+    ndb_entity = hybrid_entity.datastore_entity.get_entity()
     properties = {name: prop._get_value(ndb_entity) for name, prop in ndb_entity._properties.items()}
     entity = cls()
     entity._populate_from_stored(**properties)
@@ -178,6 +181,11 @@ class Model(object):
         field = prop.to_search_field()
         entity.hybrid_entity.set(key, value, field)
       property = prop.to_datastore_property()
+      if prop_schema.indexed_datastore:
+        if inspect.isclass(property):
+          property = property(indexed=True)
+        else:
+          property._indexed = True
       entity.hybrid_entity.set(key, value, property)
   
   def save(self):
@@ -188,12 +196,12 @@ class Model(object):
   
   @classmethod
   def get(cls, document_id):
-    entity = cls.hybrid_model.get(document_id=document_id)
+    entity = cls.hybrid_model.get(document_id)
     return cls._entity_to_model(entity)
   
   @classmethod
   def get_multi(cls, document_ids):
-    hybrid_entities = cls.hybrid_model.get_multi(document_ids=document_ids)
+    hybrid_entities = cls.hybrid_model.get_multi(document_ids)
     entities = map(cls._entity_to_model, hybrid_entities)
     return entities
   

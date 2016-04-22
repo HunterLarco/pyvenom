@@ -106,8 +106,8 @@ class ModelTest(BasicTestCase):
     assert len(entities) == 1
     
     entity = entities[0]
-    assert entity.entity.foo == 20
-    assert entity.entity.bar == 48
+    assert entity.datastore_entity.get_entity().foo == 20
+    assert entity.datastore_entity.get_entity().bar == 48
     
     entities = Test.foo10()
     assert len(entities) == 1

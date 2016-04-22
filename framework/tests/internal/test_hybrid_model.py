@@ -58,7 +58,7 @@ class DynamicModelTest(BasicTestCase):
 
 
 class TestHybrid(venom.internal.hybrid_model.HybridModel):
-  pass
+  default_indexed = True
 
 
 class HybridModelTest(BasicTestCase):
@@ -80,8 +80,8 @@ class HybridModelTest(BasicTestCase):
     assert len(entities) == 1
     
     entity = entities[0]
-    assert entity.entity.foo == 123
-    assert entity.entity.bar == 'baz'
+    assert entity.datastore_entity.get_entity().foo == 123
+    assert entity.datastore_entity.get_entity().bar == 'baz'
     
     # query by search on ndb only property
     entities = TestHybrid.query_by_search('bar = baz')
@@ -92,21 +92,21 @@ class HybridModelTest(BasicTestCase):
     assert len(entities) == 1
     
     entity = entities[0]
-    assert entity.entity.foo == 123
-    assert entity.entity.bar == 'baz'
+    assert entity.datastore_entity.get_entity().foo == 123
+    assert entity.datastore_entity.get_entity().bar == 'baz'
     
     # query by search on search only property
     entities = TestHybrid.query_by_search('baz = 456')
     assert len(entities) == 1
     
     entity = entities[0]
-    assert entity.entity.foo == 123
-    assert entity.entity.bar == 'baz'
+    assert entity.datastore_entity.get_entity().foo == 123
+    assert entity.datastore_entity.get_entity().bar == 'baz'
     
     # since baz exists only on search documents
     # it cannot be found on a returned entity from the ndb
     with smart_assert.raises(AttributeError) as context:
-      entity.entity.baz
+      entity.datastore_entity.get_entity().baz
     
     # query by ndb on search only property
     entities = TestHybrid.query_by_datastore(ndb.GenericProperty('baz') == 456)
@@ -129,7 +129,7 @@ class HybridModelTest(BasicTestCase):
     entity.set('bar', 'baz', ndb.StringProperty)
     entity.put()
     
-    entity = TestHybrid(key=entity.key)
+    entity = TestHybrid(entity=entity.datastore_entity.get_entity())
     entity.set('baz', 456, ndb.IntegerProperty)
     entity.set('baz', 456, search.NumberField)
     entity.set('bar', 'updated', ndb.StringProperty)
@@ -139,9 +139,8 @@ class HybridModelTest(BasicTestCase):
     assert len(entities) == 1
     
     entity = entities[0]
-    assert entity.entity.baz == 456
-    assert entity.entity.foo == 123
-    assert entity.entity.bar == 'updated'
+    assert entity.datastore_entity.get_entity().baz == 456
+    assert entity.datastore_entity.get_entity().bar == 'updated'
     
     entity = TestHybrid()
     entity.set('foo', 123, ndb.IntegerProperty)
@@ -166,33 +165,6 @@ class HybridModelTest(BasicTestCase):
     
     entities = TestHybrid.query_by_datastore()
     assert len(entities) == 0
-    
-  def test_saving_with_no_diff(self):
-    # initial put
-    entity = TestHybrid()
-    entity.set('foo', 123, ndb.IntegerProperty)
-    entity.set('foo', 123, search.NumberField)
-    entity.set('bar', 'baz', ndb.StringProperty)
-    assert entity.put() == True
-    assert entity.put() == False
-    
-    # change ndb
-    entity.set('bar', 'bar', ndb.StringProperty)
-    
-    assert entity._has_datastore_diff(entity.entity) == True
-    assert entity._has_search_diff(entity.document) == False
-    
-    assert entity.put() == True
-    assert entity.put() == False
-    
-    # change search api
-    entity.set('foo', 124, search.NumberField)
-    
-    assert entity._has_datastore_diff(entity.entity) == False
-    assert entity._has_search_diff(entity.document) == True
-    
-    assert entity.put() == True
-    assert entity.put() == False
 
   def test_get(self):
     entity = TestHybrid()
@@ -200,27 +172,27 @@ class HybridModelTest(BasicTestCase):
     entity.set('foo', 123, search.NumberField)
     entity.put()
     
-    key1 = entity.key
-    doc1 = entity.document_id
+    key1 = entity.datastore_entity.entity_key
+    doc1 = entity.search_document.document_id
     
-    entity = TestHybrid.get(key=key1)
-    assert entity.entity.foo == 123
-    entity = TestHybrid.get(document_id=doc1)
-    assert entity.entity.foo == 123
+    entity = TestHybrid.get(key1)
+    assert entity.datastore_entity.get_entity().foo == 123
+    entity = TestHybrid.get(doc1)
+    assert entity.datastore_entity.get_entity().foo == 123
     
     entity = TestHybrid()
     entity.set('foo', 456, ndb.IntegerProperty)
     entity.set('foo', 456, search.NumberField)
     entity.put()
     
-    key2 = entity.key
-    doc2 = entity.document_id
+    key2 = entity.datastore_entity.entity_key
+    doc2 = entity.search_document.document_id
     
-    entities = TestHybrid.get_multi(keys=[key1, key2])
-    assert entities[0].entity.foo == 123
-    assert entities[1].entity.foo == 456
+    entities = TestHybrid.get_multi([key1, key2])
+    assert entities[0].datastore_entity.get_entity().foo == 123
+    assert entities[1].datastore_entity.get_entity().foo == 456
     
-    entities = TestHybrid.get_multi(document_ids=[doc1, doc2])
-    assert entities[0].entity.foo == 123
-    assert entities[1].entity.foo == 456
+    entities = TestHybrid.get_multi([doc1, doc2])
+    assert entities[0].datastore_entity.get_entity().foo == 123
+    assert entities[1].datastore_entity.get_entity().foo == 456
     

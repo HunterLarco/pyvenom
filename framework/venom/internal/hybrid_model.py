@@ -1,5 +1,4 @@
 # system imports
-from collections import defaultdict
 from collections import namedtuple
 
 # app engine imports
@@ -7,7 +6,7 @@ from google.appengine.ext import ndb
 from google.appengine.api import search
 
 
-__all__ = ['DynamicModel', 'HybridModel', 'MetaHybridModel']
+__all__ = ['DynamicModel', 'HybridModel', 'MetaHybridModel', 'HybridSearchDocument', 'HybridDatastoreEntity', 'HybridPutManager']
 
 
 # TODO try this when the key of it yields nothing from the db
@@ -52,7 +51,7 @@ class HybridSearchDocument(object):
     
     self.index = index
     self._set_document(document)
-    self.document_id = document_id
+    if document_id: self.document_id = document_id
   
   def has_diff(self, fields):
     document = self.get_document()
@@ -99,7 +98,7 @@ class HybridDatastoreEntity(object):
     
     self.dynamic_model = dynamic_model
     self._set_entity(entity)
-    self.entity_key = entity_key
+    if entity_key: self.entity_key = entity_key
   
   def has_diff(self, properties):
     entity = self.get_entity()
@@ -142,14 +141,55 @@ class HybridDatastoreEntity(object):
 
 class HybridPutManager(object):
   def __init__(self, hybrid_entities):
+    self.hybrids = []
+    
     if not isinstance(hybrid_entities, list):
       hybrid_entities = [hybrid_entities]
+    for hybrid_entity in hybrid_entities:
+      self.add(hybrid_entity)
   
   def add(self, hybrid_entity):
-    pass
+    self.hybrids.append(hybrid_entity)
+  
+  def _put_search_documents(self):
+    search_indexes = {}
+    for hybrid in self.hybrids:
+      if hybrid.document_has_diff():
+        document = hybrid.get_update_document()
+        if not hybrid.kind in search_indexes:
+          search_indexes[hybrid.kind] = {
+            'index': hybrid.index,
+            'documents': [],
+            'hybrids': []
+          }
+        search_indexes[hybrid.kind]['documents'].append(document)
+        search_indexes[hybrid.kind]['hybrids'].append(hybrid)
+    
+    for search_info in search_indexes.values():
+      index = search_info['index']
+      documents = search_info['documents']
+      hybrids = search_info['hybrids']
+      results = index.put(documents)
+      
+      for hybrid, document, result in zip(hybrids, documents, results):
+        hybrid.register_document(document, result)
+  
+  def _put_datastore_entities(self):
+    entities = []
+    saved_hybrids = []
+    for hybrid in self.hybrids:
+      if hybrid.datastore_has_diff():
+        entities.append(hybrid.get_update_entity())
+        saved_hybrids.append(hybrid)
+    
+    ndb.put_multi(entities)
+    
+    for entity, hybrid in zip(entities, saved_hybrids):
+      hybrid.register_entity(entity)
   
   def get_results(self):
-    pass
+    self._put_search_documents()
+    self._put_datastore_entities()
 
 
 class MetaHybridModel(type):
@@ -166,7 +206,7 @@ class HybridModel(object):
   model = None
   index = None
   
-  # contants
+  # constants
   default_indexed = False
   
   @classmethod
@@ -175,21 +215,56 @@ class HybridModel(object):
     cls.model = type(cls.kind, (DynamicModel,), {})
     cls.index = search.Index(name=cls.kind)
   
-  def __init__(self):
+  def __init__(self, entity=None, document=None):
     super(HybridModel, self).__init__()
     self._search_properties = {}
     self._datastore_properties = {}
     
-    self._search_document = None
-    self._datastore_entity = None
+    self.search_document = HybridSearchDocument(self.index, document=document)
+    self.datastore_entity = HybridDatastoreEntity(self.model, entity=entity)
 
   @property
-  def search_document(self):
-    return self._search_document.get_search_document()
-  
+  def entity_key(self):
+    return self.datastore_entity.entity_key
+    
   @property
-  def datastore_entity(self):
-    return self._datastore_entity.get_datastore_entity()
+  def document_id(self):
+    return self.search_document.document_id
+
+  def _get_document_fields(self):
+    return self._search_properties.values()
+
+  def document_has_diff(self):
+    fields = self._get_document_fields()
+    return self.search_document.has_diff(fields)
+  
+  def get_update_document(self):
+    fields = self._get_document_fields()
+    return self.search_document.get_update_document(fields)
+  
+  def register_document(self, document, result):
+    return self.search_document.register_update(document, result)
+  
+  def _get_datastore_properties(self):
+    return [
+      DatastorePropertyContainer(property, name, value)
+      for name, (value, property) in self._datastore_properties.items()
+    ]
+
+  def datastore_has_diff(self):
+    properties = self._get_datastore_properties()
+    return self.datastore_entity.has_diff(properties)
+  
+  def get_update_entity(self):
+    properties = self._get_datastore_properties()
+    if not self.datastore_entity.get_entity():
+      doc_id = self.search_document.document_id
+      self.datastore_entity.entity_key = ndb.Key(self.kind, doc_id)
+      self.datastore_entity._loaded_entity = False
+    return self.datastore_entity.get_update_entity(properties)
+  
+  def register_entity(self, entity):
+    return self.datastore_entity.register_update(entity)
 
   def set(self, name, value, property):
     if isinstance(property, ndb.Property):
@@ -208,293 +283,45 @@ class HybridModel(object):
     field = field_class(name=name, value=value)
     self._search_properties[name] = field
   
+  def delete(self):
+    self.index.delete(self.document_id)
+    self.entity_key.delete()
+  
   def put(self):
-    HybridPutManager(self).get_results()
+    self.put_multi([self])
   
   @classmethod
   def put_multi(cls, hybrid_entities):
     HybridPutManager(hybrid_entities).get_results()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-
-
-
-
-
-class PutAsync(object):
-  def __init__(self, entities):
-    if not isinstance(entities, list):
-      entities = [entities]
-    
-    self.datastore = []
-    self.search = defaultdict(list)
-    self.new_datastore = []
-    
-    self._has_put = False
-    
-    for entity in entities:
-      self.add(entity)
-  
-  def add(self, entity):
-    if entity.datastore_requires_update():
-      if entity.exists_in_datastore():
-        self.datastore.append(entity)
-      else:
-        self.new_datastore.append(entity)
-  
-    if entity.search_requires_update():
-      self.search[entity.index.name].append(entity)
-      
-  def put(self):
-    if self._has_put:
-      raise Exception('Cannot reuse PutAsync')
-    self._has_put = True
-    
-    for hybrid_entities in self.search.values():
-      if hybrid_entities:
-        index = hybrid_entities[0].index
-        documents = [
-          hybrid_entity.form_search_document()
-          for hybrid_entity in hybrid_entities
-        ]
-        doc_ids = index.put(documents)
-        for hybrid_entity, document, doc_id in zip(hybrid_entities, documents, doc_ids):
-          document._doc_id = doc_id.id
-          hybrid_entity._register_search_document(document)
-    
-    entities = []
-    for hybrid_entity in self.new_datastore:
-      ndb_key = ndb.Key(hybrid_entity.kind, hybrid_entity.search_document.doc_id)
-      ndb_entity = hybrid_entity.form_datastore_entity(key=ndb_key)
-      entities.append(ndb_entity)
-    
-    for hybrid_entity in self.datastore:
-      entities.append(hybrid_entity.form_datastore_entity())
-    
-    ndb.put_multi(entities)
-
-
-class HybridModel(object):
-  __metaclass__ = MetaHybridModel
-  
-  # attributes updates by metaclass
-  kind = None
-  model = None
-  index = None
   
   @classmethod
-  def _init_class(cls):
-    cls.kind = cls.__name__
-    cls.model = type(cls.kind, (DynamicModel,), {})
-    cls.index = search.Index(name=cls.kind)
+  def get(cls, entity_key_or_document_id):
+    return cls.get_multi([entity_key_or_document_id])[0]
   
-  def __init__(self, key=None, document_id=None, entity=None, document=None):
-    super(HybridModel, self).__init__()
-    self._search_properties = {}
-    self._datastore_properties = {}
-    
-    self.key = None
-    self.document_id = None
-    
-    self.entity = entity
-    self._entity_loaded = bool(entity)
-    self.document = document
-    self._document_loaded = bool(document)
-    
-    if document:
-      self.key = ndb.Key(self.kind, document.doc_id)
-      self.document_id = document.doc_id
-    elif entity:
-      self.key = entity.key
-      self.document_id = self.key.pairs()[0][1]
-    elif key:
-      self.key = key
-      self.document_id = key.pairs()[0][1]
-    elif document_id:
-      self.key = ndb.Key(self.kind, document_id)
-      self.document_id = document_id
-  
-  def datastore_requires_update(self):
-    entity = self.datastore_entity
-    if not entity:
-      return True
-    for key, (prop_value, prop) in self._datastore_properties.items():
-      if not hasattr(entity, key):
-        return True
-      entity_value = getattr(entity, key)
-      if not entity_value == prop_value:
-        return True
-    return False
-  
-  def search_requires_update(self):
-    document = self.search_document
-    if not document:
-      return True
-    fields = {
-      field.name: field
-      for field in document.fields
-    }
-    if set(fields.keys()) != set(self._search_properties.keys()):
-      return True
-    for key, prop in self._search_properties.items():
-      field_value = fields[key].value
-      if not field_value == prop.value:
-        return True
-    return False
-  
-  def exists_in_datastore(self):
-    return bool(self.datastore_entity)
-  
-  def exists_in_search(self):
-    return bool(self.search_document)
-  
-  @property
-  def datastore_entity(self):
-    if not self.key:
-      return None
-    if not self._entity_loaded:
-      self.entity = self.key.get()
-      self._entity_loaded = True
-    return self.entity
-  
-  @property
-  def search_document(self):
-    if not self.document_id:
-      return None
-    if not self._document_loaded:
-      self.document = self.index.get(self.document_id)
-      self._document_loaded = True
-    return self.document
-  
-  def _register_search_document(self, document):
-    self.document = document
-    self.document_id = document.doc_id if document else None
-  
-  def _register_datastore_entity(self, entity):
-    self.entity = entity
-    self.key = entity.key if entity else None
-  
-  def form_search_document(self):
-    if not self.exists_in_search():
-      return search.Document(fields = self._search_properties.values())
-    document = self.search_document
-    fields = document.fields
-    search_properties = { key: value for key, value in self._search_properties.items() }
-    for field in fields:
-      if not field.name in search_properties:
-        search_properties[field.name] = field
-    return search.Document(fields=search_properties.values(), doc_id=self.document_id)
-  
-  def form_datastore_entity(self, key=None):
-    if not self.exists_in_datastore():
-      entity = self.model()
-      for name, (value, prop) in self._datastore_properties.items():
-        entity.set(name, value, prop)
-      if key:
-        entity.key = entity._key = key
-      return entity
-    entity = self.datastore_entity
-    for key, (value, prop) in self._datastore_properties.items():
-      if not hasattr(entity, key):
-        entity.set(key, value, prop)
-      else:
-        setattr(entity, key, value)
-    return entity
-  
-  def set(self, name, value, property):
-    if isinstance(property, ndb.Property):
-      self._set_datastore_property(name, value, property)
-    elif issubclass(property, ndb.Property):
-      self._set_datastore_property(name, value, property())
-    elif issubclass(property, search.Field):
-      self._set_search_property(name, value, property)
-    else:
-      raise Exception('Unknown property {}'.format(property))
-  
-  def _set_datastore_property(self, name, value, property_instance):
-    self._datastore_properties[name] = (value, property_instance)
-  
-  def _set_search_property(self, name, value, field_class):
-    field = field_class(name=name, value=value)
-    self._search_properties[name] = field
-  
-  def put(self):
-    PutAsync(self).put()
-
-  def _has_search_diff(self, document):
-    fields = {
-      field.name: field
-      for field in document.fields
-    }
-    if set(fields.keys()) != set(self._search_properties.keys()):
-      return True
-    for key, prop in self._search_properties.items():
-      field_value = fields[key].value
-      if not field_value == prop.value:
-        return True
-    return False
-  
-  def _has_datastore_diff(self, entity):
-    for key, (prop_value, prop) in self._datastore_properties.items():
-      if not hasattr(entity, key):
-        return True
-      entity_value = getattr(entity, key)
-      if not entity_value == prop_value:
-        return True
-    return False
+  @classmethod
+  def get_multi(cls, entity_keys_or_document_ids):
+    to_grab = [
+      entity_key_or_document_id if isinstance(entity_key_or_document_id, ndb.Key)
+      else ndb.Key(cls.kind, entity_key_or_document_id)
+      for entity_key_or_document_id in entity_keys_or_document_ids
+    ]
+    grabbed = ndb.get_multi(to_grab)
+    return [
+      cls(entity=entity) if entity
+      else None
+      for entity in grabbed
+    ]
 
   @classmethod
-  def query_by_search(self, query_string):
+  def query_by_search(cls, query_string):
     options = search.QueryOptions(ids_only=True)
     query = search.Query(query_string, options=options)
-    documents = self.index.search(query)
-    keys = [ndb.Key(self.kind, document.doc_id) for document in documents]
+    documents = cls.index.search(query)
+    keys = [ndb.Key(cls.kind, document.doc_id) for document in documents]
     entities = ndb.get_multi(keys)
-    hybrid_entities = map(self.entity_to_hybrid_entity, entities)
-    return hybrid_entities
+    return [ cls(entity=datastore_entity) for datastore_entity in entities ]
   
   @classmethod
-  def query_by_datastore(self, query_component=None):
-    query = self.model.query(query_component) if query_component else self.model.query()
-    hybrid_entities = map(self.entity_to_hybrid_entity, query)
-    return hybrid_entities
-  
-  @classmethod
-  def entity_to_hybrid_entity(cls, entity):
-    return cls(entity=entity)
-  
-  def delete(self):
-    self.index.delete(self.document_id)
-    self.key.delete()
-  
-  @classmethod
-  def get(cls, key=None, document_id=None):
-    if document_id:
-      key = ndb.Key(cls.kind, document_id)
-    entity = key.get()
-    return cls.entity_to_hybrid_entity(entity)
-  
-  @classmethod
-  def get_multi(cls, keys=None, document_ids=None):
-    if document_ids:
-      keys = map(lambda id: ndb.Key(cls.kind, id), document_ids)
-    entities = ndb.get_multi(keys)
-    return map(cls.entity_to_hybrid_entity, entities)
-  
-  @classmethod
-  def put_multi(cls, entities):
-    PutAsync(entities).put()"""
+  def query_by_datastore(cls, query_component=None):
+    query = cls.model.query(query_component) if query_component else cls.model.query()
+    return [ cls(entity=datastore_entity) for datastore_entity in query ]

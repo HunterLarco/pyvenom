@@ -19,7 +19,7 @@ def bfile(*args, **kwargs):
   '       builtin was removed.
   """
   is_dev = os.environ.get('SERVER_SOFTWARE','').startswith('Development')
-  if is_dev:
+  if is_dev and file.__base__ != object:
     file_class = type('file', (file.__base__,), {})
     return file_class(*args, **kwargs)
   return file(*args, **kwargs)

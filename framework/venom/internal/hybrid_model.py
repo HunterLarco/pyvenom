@@ -140,6 +140,8 @@ class HybridDatastoreEntity(object):
 
 
 class HybridPutManager(object):
+  maximum_search_put = 200
+  
   def __init__(self, hybrid_entities):
     self.hybrids = []
     
@@ -169,7 +171,9 @@ class HybridPutManager(object):
       index = search_info['index']
       documents = search_info['documents']
       hybrids = search_info['hybrids']
-      results = index.put(documents)
+      results = []
+      for i in range(0, len(documents), self.maximum_search_put):
+        results += index.put(documents[i: i + self.maximum_search_put])
       
       for hybrid, document, result in zip(hybrids, documents, results):
         hybrid.register_document(document, result)

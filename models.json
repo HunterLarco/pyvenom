@@ -1,0 +1,82 @@
+/*
+class User(venom.Model):
+  username = venom.Properties.String  (max=20)
+  age      = venom.Properties.Integer (min=0)
+  password = venom.Properties.Password(max=20)
+  
+  adults      = venom.Query(age >= 18)
+  children    = venom.Query(age < 18)
+  teenagers   = venom.Query(children, age >= 13)
+
+  login       = venom.Query(username == venom.QP, password == venom.QP)
+*/
+
+
+{
+  "modelname": "User",
+  "properties": [
+    {
+      "name": "username",
+      "type": "String",
+      "attributes": {
+        "max": 20
+      }
+    },
+    {
+      "name": "age",
+      "type": "Integer",
+      "attributes": {
+        "min": 0
+      }
+    },
+    {
+      "name": "password",
+      "type": "Password",
+      "attributes": {
+        "max": 20
+      }
+    }
+  ],
+  "queries": [
+    {
+      "name": "adults",
+      "property": "age",
+      "value": "18",
+      "operator": ">="
+    },
+    {
+      "name": "children",
+      "property": "age",
+      "value": "18",
+      "operator": "<"
+    },
+    {
+      "name": "teenagers",
+      "AND": [
+        {
+          "property": "age",
+          "value": "13",
+          "operator": ">="
+        },
+        {
+          "query": "children"
+        }
+      ]
+    },
+    {
+      "name": "login",
+      "AND": [
+        {
+          "property": "username",
+          "value": "~venom.QP~",
+          "operator": "="
+        },
+        {
+          "property": "password",
+          "value": "~venom.QP~",
+          "operator": "="
+        }
+      ]
+    }
+  ]
+}

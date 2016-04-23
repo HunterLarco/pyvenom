@@ -1,0 +1,19 @@
+indexes:
+
+# VENOM INDEXES
+
+# This search.yaml is automatically updated whenever the venom framework
+# detects a schema change. If you want to manage the search.yaml file
+# manually, remove the above marker line (the line saying "# VENOM INDEXES").
+# If you want to manage some indexes manually, move them above the marker line.
+# The search.yaml file is automatically uploaded to the admin console when
+# you next deploy your application using appcfg.py.
+
+- kind: Thing
+  properties:
+  - name: name
+
+- kind: User2
+  properties:
+  - name: email
+  - name: password

@@ -1,5 +1,10 @@
+# system imports
+import inspect
+
 # package imports
 from ..internal.hybrid_model import HybridModel
+from ..internal.index_yaml import update_index_yaml
+from ..internal.search_yaml import update_search_yaml
 from attribute import ModelAttribute
 from Properties import Property
 from query import Query
@@ -12,6 +17,8 @@ class MetaModel(type):
   def __init__(cls, name, bases, classdict):
     super(MetaModel, cls).__init__(name, bases, classdict)
     cls._init_class()
+    update_index_yaml([cls])
+    update_search_yaml([cls])
 
 
 class PropertySchema(object):
@@ -20,6 +27,14 @@ class PropertySchema(object):
     self.datastore = datastore
     self.search = search
     self.indexed_datastore = indexed_datastore
+  
+  def __eq__(self, value):
+    return (
+      self.property.__equals__(value.property) and
+      self.search == value.search and
+      self.datastore == value.datastore and
+      self.indexed_datastore == value.indexed_datastore
+    )
   
   def __repr__(self):
     return 'PropertySchema({}, datastore={}, search={}, indexed_datastore={})'.format(
@@ -31,9 +46,19 @@ class PropertySchema(object):
 
 
 class ModelSchema(dict):
-  def __init__(self, properties, queries):
+  def __init__(self, model, properties, queries):
     schema = self._build_schema(properties, queries)
+    self._model = model
     super(ModelSchema, self).__init__(schema)
+  
+  def __eq__(self, value):
+    if set(self.keys()) != set(value.keys()):
+      return False
+    for key, prop_schema in self.items():
+      value_prop_schema = value[key]
+      if not prop_schema == value_prop_schema:
+        return False
+    return True
   
   def _build_schema(self, properties, queries):
     schema = {
@@ -70,6 +95,8 @@ class ModelSchema(dict):
 class Model(object):
   __metaclass__ = MetaModel
   
+  kinds = {}
+  
   # attributes updates by metaclass
   kind = None
   hybrid_model = None
@@ -78,10 +105,12 @@ class Model(object):
   def _init_class(cls):
     from Properties import Property
     cls.kind = cls.__name__
+    cls.kinds[cls.kind] = cls
     cls.hybrid_model = type(cls.kind, (HybridModel,), {})
+    cls.all = Query()
     cls._properties = ModelAttribute.connect(cls, kind=Property)
     cls._queries = ModelAttribute.connect(cls, kind=Query)
-    cls._schema = ModelSchema(cls._properties, cls._queries)
+    cls._schema = ModelSchema(cls, cls._properties, cls._queries)
   
   def __init__(self, **kwargs):
     super(Model, self).__init__()
@@ -113,11 +142,13 @@ class Model(object):
     return entities
   
   @classmethod
-  def _entity_to_model(cls, ndb_entity):
+  def _entity_to_model(cls, hybrid_entity):
+    ndb_entity = hybrid_entity.datastore_entity.get_entity()
     properties = {name: prop._get_value(ndb_entity) for name, prop in ndb_entity._properties.items()}
     entity = cls()
     entity._populate_from_stored(**properties)
-    entity._set_key(ndb_entity.key)
+    entity.hybrid_entity = hybrid_entity
+    entity.key = entity.hybrid_entity.document_id
     return entity
   
   def populate(self, **kwargs):
@@ -145,20 +176,46 @@ class Model(object):
     json['key'] = self.key
     return json
   
-  def save(self):
-    for key, prop_schema in self._schema.items():
+  @classmethod
+  def _set_hybrid_entity_values(cls, entity):
+    for key, prop_schema in entity._schema.items():
       prop = prop_schema.property
-      value = prop._get_stored_value(self)
+      value = prop._get_stored_value(entity)
       if prop_schema.search and value != None:
         field = prop.to_search_field()
-        self.hybrid_entity.set(key, value, field)
+        entity.hybrid_entity.set(key, value, field)
       property = prop.to_datastore_property()
-      self.hybrid_entity.set(key, value, property)
-    ndb_entity = self.hybrid_entity.put()
-    self._set_key(ndb_entity.key)
+      if prop_schema.indexed_datastore:
+        if inspect.isclass(property):
+          property = property(indexed=True)
+        else:
+          property._indexed = True
+      entity.hybrid_entity.set(key, value, property)
+  
+  def save(self):
+    self._set_hybrid_entity_values(self)
+    self.hybrid_entity.put()
+    self.key = self.hybrid_entity.document_id
     return self
   
   @classmethod
   def get(cls, document_id):
-    entity = cls.hybrid_model.get(document_id=document_id)
+    entity = cls.hybrid_model.get(document_id)
     return cls._entity_to_model(entity)
+  
+  @classmethod
+  def get_multi(cls, document_ids):
+    hybrid_entities = cls.hybrid_model.get_multi(document_ids)
+    entities = map(cls._entity_to_model, hybrid_entities)
+    return entities
+  
+  @classmethod
+  def save_multi(cls, entities):
+    hybrid_entities = []
+    for entity in entities:
+      cls._set_hybrid_entity_values(entity)
+      hybrid_entities.append(entity.hybrid_entity)
+    cls.hybrid_model.put_multi(hybrid_entities)
+    for entity in entities:
+      entity.key = entity.hybrid_entity.document_id
+      

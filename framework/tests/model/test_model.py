@@ -106,8 +106,8 @@ class ModelTest(BasicTestCase):
     assert len(entities) == 1
     
     entity = entities[0]
-    assert entity.foo == 20
-    assert entity.bar == 48
+    assert entity.datastore_entity.get_entity().foo == 20
+    assert entity.datastore_entity.get_entity().bar == 48
     
     entities = Test.foo10()
     assert len(entities) == 1
@@ -212,4 +212,27 @@ class ModelTest(BasicTestCase):
     # check that key didn't change on a class level (for all instances)
     user = User()
     assert user.key == None
+  
+  def test_get(self):
+    class User(venom.Model):
+      username = venom.Properties.String()
+      email = venom.Properties.String()
+      age = venom.Properties.Float()
+      password = venom.Properties.Password(min=3)
+      bio = venom.Properties.String(max=None)
     
+    user = User(username='username1')
+    user.save()
+    
+    key1 = user.key
+    assert User.get(key1).username == 'username1'
+    
+    user = User(username='username2')
+    user.save()
+    
+    key2 = user.key
+    assert User.get(key2).username == 'username2'
+    
+    users = User.get_multi([key1, key2])
+    assert users[0].username == 'username1'
+    assert users[1].username == 'username2'

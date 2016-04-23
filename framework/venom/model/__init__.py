@@ -1,7 +1,8 @@
-__all__ = ['Properties']
+__all__ = ['Properties', 'migrate']
 
 
 import Properties
+import migrate
 
 
 from model import *

@@ -219,12 +219,12 @@ class String(ChoicesProperty):
   def _validate_min(self, value):
     if self.min == None: return
     if len(value) < self.min:
-      raise PropertyValidationFailed('IntegerProperty value length was less than min')
+      raise PropertyValidationFailed('StringProperty value length was less than min')
   
   def _validate_max(self, value):
     if self.max == None: return
     if len(value) > self.max:
-      raise PropertyValidationFailed('IntegerProperty value length was greater than max')
+      raise PropertyValidationFailed('StringProperty value length was greater than max')
   
   def _validate_characters(self, value):
     if self.characters == None: return

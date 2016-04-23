@@ -7,7 +7,19 @@ from index_yaml import IndexYaml, IndexYamlFromFile, IndexGenerator
 
 
 __all__  = ['VenomIndexGenerator', 'VenomYamlFromFile']
-__all__ += ['update_search_yaml']
+__all__ += ['update_search_yaml', 'load_search_schema', 'read_search_yaml']
+
+
+def read_search_yaml():
+  index = ''
+  if os.path.isfile('search.venom.yaml'):
+    with open('search.venom.yaml', 'r') as f:
+      index = f.read()
+  return index
+
+
+def load_search_schema():
+  return VenomYamlFromFile(read_search_yaml())
 
 
 def update_search_yaml(models):
@@ -15,10 +27,7 @@ def update_search_yaml(models):
   if not is_dev:
     return False
   
-  index = ''
-  if os.path.isfile('search.venom.yaml'):
-    with open('search.venom.yaml', 'r') as f:
-      index = f.read()
+  index = read_search_yaml()
   
   schemas = map(lambda model: model._schema, models)
   generator = VenomIndexGenerator(yaml=index, schemas=schemas)

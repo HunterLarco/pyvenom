@@ -34,14 +34,14 @@ class HybridModelTests(BasicTestCase):
     assert len(entity.search_document.get_document().fields) == 1
     
     document_id = entity.search_document.document_id
-    entity = ndb.Key(TestDynamicModel.kind, document_id).get()
+    entity = ndb.Key(TestDynamicModel.kind, int(document_id)).get()
     assert entity != None
   
   def test_update(self):
     entity = TestDynamicModel()
     
     assert entity.datastore_has_diff() == True
-    assert entity.document_has_diff() == True
+    assert entity.document_has_diff() == False
     
     entity.put()
     
@@ -71,11 +71,11 @@ class HybridModelTests(BasicTestCase):
     bar.put()
     
     assert foo.datastore_has_diff() == True
-    assert foo.document_has_diff() == True
+    assert foo.document_has_diff() == False
     assert bar.datastore_has_diff() == False
     assert bar.document_has_diff() == False
     assert baz.datastore_has_diff() == True
-    assert baz.document_has_diff() == True
+    assert baz.document_has_diff() == False
     
     TestDynamicModel.put_multi([ foo, bar, baz ])
     

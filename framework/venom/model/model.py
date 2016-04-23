@@ -95,6 +95,8 @@ class ModelSchema(dict):
 class Model(object):
   __metaclass__ = MetaModel
   
+  kinds = {}
+  
   # attributes updates by metaclass
   kind = None
   hybrid_model = None
@@ -103,7 +105,9 @@ class Model(object):
   def _init_class(cls):
     from Properties import Property
     cls.kind = cls.__name__
+    cls.kinds[cls.kind] = cls
     cls.hybrid_model = type(cls.kind, (HybridModel,), {})
+    cls.all = Query()
     cls._properties = ModelAttribute.connect(cls, kind=Property)
     cls._queries = ModelAttribute.connect(cls, kind=Query)
     cls._schema = ModelSchema(cls, cls._properties, cls._queries)

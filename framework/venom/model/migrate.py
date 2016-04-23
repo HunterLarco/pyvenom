@@ -70,13 +70,16 @@ class Migration(object):
     self._current_migration.finished = datetime.datetime.now()
     self._current_migration.put()
   
-  def run(self):
+  def run(self, batch_size=200):
     kinds_updated = 0
     kinds = self._get_added_properties()
     for kind in kinds:
       if kind in Model.kinds:
         model = Model.kinds[kind]
-        model.save_multi(model.all())
+        entities = model.all()
+        for i in range(0, len(entities), batch_size):
+          group = entities[i: i + batch_size]
+          model.save_multi(group)
         kinds_updated += 1
     self._finish()
     return kinds_updated

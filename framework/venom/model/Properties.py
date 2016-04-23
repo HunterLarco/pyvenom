@@ -26,6 +26,15 @@ class Property(ModelAttribute):
     super(Property, self).__init__()
     self.required = required
   
+  def __equals__(self, value):
+    cls = self.__class__
+    if not isinstance(value, cls):
+      raise Exception('Can only call Property.__equals__ with a Property instance')
+    return (
+      self._name == value._name and
+      self._model is value._model
+    )
+  
   def _connect(self, entity=None, name=None, model=None):
     super(Property, self)._connect(entity=entity, name=name, model=model)
     if entity and not hasattr(entity, '_values'):
@@ -41,12 +50,6 @@ class Property(ModelAttribute):
           break
       else:
         raise PropertyValidationFailed('Property value does not conform to allowed_types')
-  
-  @staticmethod
-  def _force_list(value):
-    if not isinstance(value, list):
-      return [value]
-    return value
   
   def to_search_field(self):
     raise NotImplementedError()
@@ -209,24 +212,19 @@ class String(ChoicesProperty):
   def validate(self, value):
     super(String, self).validate(value)
     if value == None: return
-    self._validate_type(value)
     self._validate_min(value)
     self._validate_max(value)
     self._validate_characters(value)
 
-  def _validate_type(self, value):
-    if not isinstance(value, str) and not isinstance(value, unicode):
-      raise PropertyValidationFailed('StringProperty value must be an str or unicode instance')
-  
   def _validate_min(self, value):
     if self.min == None: return
     if len(value) < self.min:
-      raise PropertyValidationFailed('IntegerProperty value length was less than min')
+      raise PropertyValidationFailed('StringProperty value length was less than min')
   
   def _validate_max(self, value):
     if self.max == None: return
     if len(value) > self.max:
-      raise PropertyValidationFailed('IntegerProperty value length was greater than max')
+      raise PropertyValidationFailed('StringProperty value length was greater than max')
   
   def _validate_characters(self, value):
     if self.characters == None: return
@@ -245,6 +243,10 @@ class String(ChoicesProperty):
 
 
 class Password(String):
+  allowed_operators = frozenset({
+    PropertyComparison.EQ
+  })
+  
   def _hash(self, value):
     import hashlib
     return hashlib.sha256(value).hexdigest()
@@ -261,13 +263,17 @@ class Password(String):
 
 
 class Model(Property):
+  allowed_operators = frozenset({
+    PropertyComparison.EQ
+  })
+  
   def __init__(self, model, required=False):
     super(Model, self).__init__(required=required)
     self.model = model
 
   def _get_value(self, entity):
     value = super(Model, self)._get_value(entity)
-    if not isinstance(value, self.model):
+    if value and not isinstance(value, self.model):
       value = self.model.get(value)
     self._set_value(entity, value)
     return value

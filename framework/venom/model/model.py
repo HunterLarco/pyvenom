@@ -1,5 +1,6 @@
 # system imports
 import inspect
+import os
 
 # package imports
 from ..internal.hybrid_model import HybridModel
@@ -10,15 +11,28 @@ from Properties import Property
 from query import Query
 
 
-__all__ = ['Model', 'Model']
+__all__ = ['Model', 'MetaModel', 'PropertySchema', 'ModelSchema']
+
+
+def run_migration_if_dev():
+  is_dev = os.environ.get('SERVER_SOFTWARE','').startswith('Development')
+  if not is_dev:
+    return 0
+  
+  from migrate import Migration
+  return Migration().run()
+  
 
 
 class MetaModel(type):
   def __init__(cls, name, bases, classdict):
     super(MetaModel, cls).__init__(name, bases, classdict)
     cls._init_class()
-    update_index_yaml([cls])
-    update_search_yaml([cls])
+    if cls.kind != 'Model':
+      update_index_yaml([cls])
+      update_search_yaml([cls])
+      if cls.auto_migrate_in_dev:
+        run_migration_if_dev()
 
 
 class PropertySchema(object):
@@ -95,6 +109,7 @@ class ModelSchema(dict):
 class Model(object):
   __metaclass__ = MetaModel
   
+  auto_migrate_in_dev = True
   kinds = {}
   
   # attributes updates by metaclass

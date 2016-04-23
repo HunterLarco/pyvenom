@@ -224,8 +224,16 @@ class HybridModel(object):
     self._search_properties = {}
     self._datastore_properties = {}
     
-    self.search_document = HybridSearchDocument(self.index, document=document)
-    self.datastore_entity = HybridDatastoreEntity(self.model, entity=entity)
+    document_id = None
+    if entity and entity.key:
+      document_id = entity.key.pairs()[0][1]
+    
+    entity_key = None
+    if document and hasattr(document, 'doc_id'):
+      entity_key = ndb.Key(self.kind, document.doc_id)
+    
+    self.search_document = HybridSearchDocument(self.index, document=document, document_id=document_id)
+    self.datastore_entity = HybridDatastoreEntity(self.model, entity=entity, entity_key=entity_key)
 
   @property
   def entity_key(self):

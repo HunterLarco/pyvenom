@@ -155,6 +155,8 @@ class QueryLogicalOperator(QueryComponent):
   def to_datastore_query(self, args, kwargs):
     if self.datastore_conjuntion == None:
       raise ValueError('self.datastore_conjuntion cannot be None')
+    if not self.components:
+      return None
     return self.datastore_conjuntion(
       *map(lambda component: component.to_datastore_query(args, kwargs), self.components))
   

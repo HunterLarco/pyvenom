@@ -104,6 +104,7 @@ class Model(object):
     from Properties import Property
     cls.kind = cls.__name__
     cls.hybrid_model = type(cls.kind, (HybridModel,), {})
+    cls.all = Query()
     cls._properties = ModelAttribute.connect(cls, kind=Property)
     cls._queries = ModelAttribute.connect(cls, kind=Query)
     cls._schema = ModelSchema(cls, cls._properties, cls._queries)

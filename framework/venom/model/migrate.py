@@ -73,10 +73,9 @@ class Migration(object):
   def run(self):
     kinds_updated = 0
     kinds = self._get_added_properties()
-    models = { model.kind: model for model in Model.__subclasses__() }
     for kind in kinds:
-      if kind in models:
-        model = models[kind]
+      if kind in Model.kinds:
+        model = Model.kinds[kind]
         model.save_multi(model.all())
         kinds_updated += 1
     self._finish()

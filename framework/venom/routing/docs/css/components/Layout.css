@@ -1,0 +1,19 @@
+.Layout{
+  display:flex;
+  flex-direction:row;
+  
+  height:100%;
+}
+.Layout-Sidebar{
+  flex:shrink:0;
+  
+  height:100%;
+  overflow:scroll;
+}
+.Layout-Content{
+  flex:2;
+  flex-shrink:0;
+  
+  height:100%;
+  overflow:scroll;
+}

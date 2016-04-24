@@ -10,6 +10,7 @@ from handlers import RequestHandler
 from ..__ui__ import ui
 from ..model import Model
 import Parameters
+import docs
 
 
 __all__ = ['Application', 'VersionDispatch']
@@ -170,7 +171,7 @@ class _RoutesShortHand(WSGIEntryPoint):
 
 class Application(_RoutesShortHand):
   allowed_methods = routes.Route.allowed_methods
-  allowed_prefixes = frozenset(('api', 'meta', 'routes'))
+  allowed_prefixes = frozenset(('api', 'meta', 'routes', 'docs'))
   internal_protocol = Protocols.JSONProtocol
   
   def __init__(self, routes=None, version=1, protocol=Protocols.JSONProtocol):
@@ -181,10 +182,13 @@ class Application(_RoutesShortHand):
     self._api_prefix = '/{}/v{}'.format('api', version)
     self._meta_prefix = '/{}/v{}'.format('meta', version)
     self._routes_prefix = '/{}/v{}'.format('routes', version)
+    self._docs_prefix = '/{}/v{}'.format('docs', version)
     
     self._add_routes_route()
   
   def dispatch(self, request, response, error):
+    if self._matches_prefix(request.path, self._docs_prefix):
+      return docs.Documentation(self)
     route = self.find_route(request.path, request.method)
     if route == None:
       error(404)
@@ -219,6 +223,11 @@ class Application(_RoutesShortHand):
       if path.startswith(prefix) or path == prefix[:-1]:
         return True
     return False
+  
+  def _matches_prefix(self, path, prefix):
+    if not prefix.endswith('/'):
+      prefix = '{}/'.format(prefix)
+    return path.startswith(prefix) or path == prefix[:-1]
 
 
 class VersionDispatch(WSGIEntryPoint):

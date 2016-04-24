@@ -1,8 +1,9 @@
-__all__ = ['Parameters', 'Protocols']
+__all__ = ['Parameters', 'Protocols', 'docs']
 
 
 import Parameters
 import Protocols
+import docs
 
 
 from wsgi_entry import *

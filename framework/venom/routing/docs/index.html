@@ -47,11 +47,11 @@ html, body{
   </div>
 
   <div class='Layout-Content'>
-    <div class='EndpointDoc'>
+    <div class='EndpointDoc js-DocContent'>
     
       <div class='EndpointDoc-Title'>
-        <div class='EndpointDoc-TitleMethod'>PATCH</div>
-        /users/<div class='UrlParameter'>entity</div>
+        <div class='EndpointDoc-TitleMethod js-Method'></div>
+        <label class='js-Path'></label>
       </div>
     
       <div class='EndpointDoc-Content'>
@@ -115,6 +115,7 @@ html, body{
 {% include 'js/util/creation.js' %}
 {% include 'js/util/classes.js' %}
 
+{% include 'js/DocContent.js' %}
 {% include 'js/Sidebar.js' %}
 {% include 'js/Route.js' %}
 {% include 'js/RouteList.js' %}

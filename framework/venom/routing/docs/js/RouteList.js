@@ -1,15 +1,16 @@
 'use strict';
 (function (root) {
   
-  function RouteList () {
-    this.init();
+  function RouteList (docContent) {
+    this.init(docContent);
   }
   
   RouteList.prototype = {
-    init: function () {
+    init: function (docContent) {
       // Cache all the elements first on the instance 
       this.$list = $('.js-RouteList');
       
+      this.docContent = docContent;
       this.routes = [];
       this.activeRoute = null;
 

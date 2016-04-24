@@ -3,7 +3,8 @@
   
   root.addEventListener('load', Init);
   function Init(){
-    new RouteList();
+    var docContent = new DocContent();
+    new RouteList(docContent);
     new Sidebar();
   }
   

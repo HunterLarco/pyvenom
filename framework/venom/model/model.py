@@ -144,6 +144,13 @@ class Model(object):
       query._connect(entity=self)
   
   @classmethod
+  def _to_route_parameters(cls):
+    return {
+      key: prop.to_route_parameter()
+      for key, prop in cls._properties.items()
+    }
+  
+  @classmethod
   def _execute_datastore_query(cls, query):
     return cls._execute_query(cls.hybrid_model.query_by_datastore(query))
   
@@ -233,4 +240,7 @@ class Model(object):
     cls.hybrid_model.put_multi(hybrid_entities)
     for entity in entities:
       entity.key = entity.hybrid_entity.document_id
+  
+  def delete(self):
+    return self.hybrid_entity.delete()
       

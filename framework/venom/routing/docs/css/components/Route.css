@@ -19,6 +19,7 @@
 .Route-Method {
   display: block;
   
+  text-transform:uppercase;
   color: rgb(138, 138, 138);
   font-size: 11px;
 }

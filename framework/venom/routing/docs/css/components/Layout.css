@@ -25,6 +25,7 @@
   box-shadow: inset -1px 0px 0px rgb(140, 140, 140);
   
   width: 200px;
+  min-width:200px;
   max-width: 50%;
 }
 .Layout-Sidebar .Layout-SidebarDragger{
@@ -46,7 +47,7 @@
   width:100px;
   margin-right:-50px;
 }
-.Layout-Sidebar.dragging{
+.Layout.dragging{
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -57,6 +58,7 @@
 
 .Layout-SidebarHeader{
   flex-shrink: 0;
+  overflow: hidden;
   
   margin-right:1px;
   

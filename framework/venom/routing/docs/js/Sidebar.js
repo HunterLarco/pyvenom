@@ -7,8 +7,9 @@
   
   Sidebar.prototype = {
     init: function () {
-      // Cache all the elements first on the instance 
-      this.$sidebar = $('.js-Sidebar');
+      // Cache all the elements first on the instance
+      this.$layout = $('.js-Layout');
+      this.$sidebar = $('.js-Sidebar', this.$layout);
       this.$dragger = $('.js-SidebarDragger', this.$sidebar);
       
       this._onUp = this.handleMouseUp.bind(this);
@@ -25,7 +26,7 @@
       this._mouseStartX = event.pageX;
       this._startOffset = this.$sidebar.offsetWidth;
       
-      classes.add('dragging', this.$sidebar);
+      classes.add('dragging', this.$layout);
       root.addEventListener('mouseup', this._onUp);
       root.addEventListener('mousemove', this._onMove);
     },
@@ -36,7 +37,7 @@
       this.$sidebar.style.width = width + 'px';
     },
     handleMouseUp: function () {
-      classes.remove('dragging', this.$sidebar);
+      classes.remove('dragging', this.$layout);
       root.removeEventListener('mouseup', this._onUp);
       root.removeEventListener('mousemove', this._onMove);
     }

@@ -13,11 +13,6 @@ indexes:
   properties:
   - name: foo
 
-- kind: User
-  properties:
-  - name: email
-  - name: password
-
 - kind: User2
   properties:
   - name: thing

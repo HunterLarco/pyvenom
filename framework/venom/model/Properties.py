@@ -5,6 +5,7 @@ from google.appengine.api import search
 # package imports
 from attribute import ModelAttribute
 from query import PropertyComparison
+from ..routing import Parameters
 
 
 __all__  = ['Property']
@@ -44,7 +45,7 @@ class Property(ModelAttribute):
     if self.required and value == None:
       raise PropertyValidationFailed('Required property was None')
     
-    if len(self.allowed_types) > 0:
+    if value != None and len(self.allowed_types) > 0:
       for allowed_type in self.allowed_types:
         if isinstance(value, allowed_type):
           break
@@ -55,6 +56,9 @@ class Property(ModelAttribute):
     raise NotImplementedError()
   
   def to_datastore_property(self):
+    raise NotImplementedError()
+  
+  def to_route_parameter(self):
     raise NotImplementedError()
   
   def __get__(self, instance, cls):
@@ -174,6 +178,14 @@ class Integer(ChoicesProperty):
   
   def to_datastore_property(self):
     return ndb.IntegerProperty
+  
+  def to_route_parameter(self):
+    return Parameters.Integer(
+      required = self.required,
+      choices = self.choices,
+      min = self.min,
+      max = self.max
+    )
     
 
 class Float(Integer):
@@ -191,6 +203,14 @@ class Float(Integer):
   
   def to_datastore_property(self):
     return ndb.FloatProperty
+  
+  def to_route_parameter(self):
+    return Parameters.Float(
+      required = self.required,
+      choices = self.choices,
+      min = self.min,
+      max = self.max
+    )
 
 
 class String(ChoicesProperty):
@@ -204,9 +224,13 @@ class String(ChoicesProperty):
     self.characters = characters
   
   def _to_storage(self, value):
+    if value == None:
+      return value
     return str(value)
   
   def _from_storage(self, value):
+    if value == None:
+      return value
     return str(value)
   
   def validate(self, value):
@@ -240,6 +264,15 @@ class String(ChoicesProperty):
   
   def to_datastore_property(self):
     return ndb.StringProperty
+  
+  def to_route_parameter(self):
+    return Parameters.String(
+      required = self.required,
+      choices = self.choices,
+      min = self.min,
+      max = self.max,
+      characters = self.characters
+    )
 
 
 class Password(String):
@@ -248,6 +281,7 @@ class Password(String):
   })
   
   def _hash(self, value):
+    if value == None: return value
     import hashlib
     return hashlib.sha256(value).hexdigest()
   
@@ -293,3 +327,6 @@ class Model(Property):
   
   def query_uses_datastore(self, operator, value):
     return True
+  
+  def to_route_parameter(self):
+    return Parameters.Model(self.model, required = self.required)

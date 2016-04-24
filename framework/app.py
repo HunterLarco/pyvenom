@@ -1,7 +1,13 @@
 import venom
 
-from routes import version1
-from routes import version2
+
+app = venom.Application()
 
 
-app = venom.VersionDispatch(version1, version2)
+class User(venom.Model):
+  username = venom.Properties.String  (max=20)
+  age      = venom.Properties.Integer (min=0)
+  password = venom.Properties.Password(max=20)
+
+
+app.CRUD('/users', User)

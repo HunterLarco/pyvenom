@@ -8,6 +8,8 @@ from wsgi_entry import WSGIEntryPoint
 import Protocols
 from handlers import RequestHandler
 from ..__ui__ import ui
+from ..model import Model
+import Parameters
 
 
 __all__ = ['Application', 'VersionDispatch']
@@ -101,6 +103,55 @@ class _RoutesShortHand(WSGIEntryPoint):
   
   def TRACE(self, path, handler, protocol=None):
     return self._add_route(path, handler, protocol, routes.TRACE)
+  
+  def CRUD(self, base_path, model, protocol=None):
+    if not inspect.isclass(model):
+      raise ValueError('Expected type venom.Model got {}'.format(model))
+    if not issubclass(model, Model):
+      raise ValueError('Expected type venom.Model got {}'.format(type(model)))
+    
+    if base_path.endswith('/'):
+      base_path = base_path[:-1]
+    
+    body_params = model._to_route_parameters()
+    
+    class BaseHandler(RequestHandler):
+      def get(self):
+        return { 'entities': model.all() }
+      
+      def post(self):
+        return model(**self.body).save()
+      
+    self._add_route(base_path, BaseHandler, protocol, routes.GET)
+    self._add_route(base_path, BaseHandler, protocol, routes.POST).body(body_params)
+      
+    class SpecificHandler(RequestHandler):
+      def get(self):
+        return self.url.get('entity')
+      
+      def put(self):
+        entity = self.url.get('entity')
+        entity.populate(**self.body)
+        return entity.save()
+      
+      def patch(self):
+        entity = self.url.get('entity')
+        entity.populate(**{
+          key: value
+          for key, value in self.body.items()
+          if value != None
+        })
+        return entity.save()
+      
+      def delete(self):
+        self.url.get('entity').delete()
+    
+    path = '{}/:entity'.format(base_path)
+    url_params = { 'entity': Parameters.Model(model) }
+    self._add_route(path, SpecificHandler, protocol, routes.GET).url(url_params)
+    self._add_route(path, SpecificHandler, protocol, routes.PUT).url(url_params).body(body_params)
+    self._add_route(path, SpecificHandler, protocol, routes.PATCH).url(url_params).body(body_params)
+    self._add_route(path, SpecificHandler, protocol, routes.DELETE).url(url_params)   
 
 
 class Application(_RoutesShortHand):

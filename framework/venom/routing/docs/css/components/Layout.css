@@ -24,8 +24,8 @@
   background: rgb(244, 244, 244);
   box-shadow: inset -1px 0px 0px rgb(140, 140, 140);
   
-  width: 200px;
-  min-width:200px;
+  width: 220px;
+  min-width:220px;
   max-width: 50%;
 }
 .Layout-Sidebar .Layout-SidebarDragger{
@@ -43,9 +43,9 @@
   
   cursor:ew-resize;
 }
-.Layout-Sidebar.dragging .Layout-SidebarDragger{
-  width:100px;
-  margin-right:-50px;
+.Layout.dragging .Layout-SidebarDragger{
+  width:300px;
+  margin-right:-150px;
 }
 .Layout.dragging{
   -webkit-touch-callout: none;

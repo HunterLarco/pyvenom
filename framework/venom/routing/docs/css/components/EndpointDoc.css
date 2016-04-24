@@ -5,7 +5,7 @@
   overflow:scroll;
   
   color:rgb(51,51,51);
-  border-right: 1px solid rgb(140, 140, 140);
+  box-shadow: 1px 0px 0px rgb(140, 140, 140);
 }
 
 .EndpointDoc-Content{

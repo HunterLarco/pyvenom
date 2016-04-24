@@ -34,7 +34,9 @@ html, body{
 
 
 <div class='Layout'>
-  <div class='Layout-Sidebar'>
+  <div class='Layout-Sidebar js-Sidebar'>
+    <div class='Layout-SidebarDragger js-SidebarDragger'></div>
+    
     <div class='Layout-SidebarHeader'>
       <div class='Header-Title'>Routes</div>
     </div>
@@ -54,6 +56,7 @@ html, body{
 {% include 'js/util/creation.js' %}
 {% include 'js/util/classes.js' %}
 
+{% include 'js/Sidebar.js' %}
 {% include 'js/Route.js' %}
 {% include 'js/RouteList.js' %}
 {% include 'js/main.js' %}

@@ -11,19 +11,50 @@
 }
 
 .Layout-Sidebar{
+  position:relative;
+  
   display:flex;
   flex-direction:column;
   
   flex-shrink: 0;
   
   height: 100%;
-  overflow: scroll;
+  overflow: visible;
   
   background: rgb(244, 244, 244);
   box-shadow: inset -1px 0px 0px rgb(140, 140, 140);
   
-  min-width: 200px;
+  width: 200px;
+  max-width: 50%;
 }
+.Layout-Sidebar .Layout-SidebarDragger{
+  content:'';
+  display:block;
+  
+  position:absolute;
+  z-index:999;
+  right:0px;
+  top:0px;
+  height:100%;
+  
+  width:10px;
+  margin-right:-5px;
+  
+  cursor:ew-resize;
+}
+.Layout-Sidebar.dragging .Layout-SidebarDragger{
+  width:100px;
+  margin-right:-50px;
+}
+.Layout-Sidebar.dragging{
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;                          
+}
+
 .Layout-SidebarHeader{
   flex-shrink: 0;
   

@@ -169,8 +169,7 @@ class IndexYamlFromFile(IndexYaml):
     string = '{}\n\n{}{}\n{}'.format(
       self.manual,
       self.venom_marker, self.venom_info, super(IndexYamlFromFile, self).__str__())
-    if self.automatic:
-      string += '\n\n{}\n{}'.format(self.datastore_marker, self.automatic)
+    string += '\n\n{}\n{}'.format(self.datastore_marker, self.automatic)
     return string
     
     

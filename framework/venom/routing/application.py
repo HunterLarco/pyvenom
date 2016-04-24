@@ -117,12 +117,21 @@ class _RoutesShortHand(WSGIEntryPoint):
     
     class BaseHandler(RequestHandler):
       def get(self):
-        return { 'entities': model.all() }
+        query_name = self.query.get('query')
+        if not query_name or not query_name in model._queries:
+          return { 'entities': model.all(), 'query': 'all' }
+        query = model._queries[query_name]
+        return {
+          'entities': query(**self.query),
+          'query': query_name
+        }
       
       def post(self):
         return model(**self.body).save()
       
-    self._add_route(base_path, BaseHandler, protocol, routes.GET)
+    self._add_route(base_path, BaseHandler, protocol, routes.GET).query({
+      'query': Parameters.String(required=False)
+    })
     self._add_route(base_path, BaseHandler, protocol, routes.POST).body(body_params)
       
     class SpecificHandler(RequestHandler):
@@ -151,7 +160,7 @@ class _RoutesShortHand(WSGIEntryPoint):
     self._add_route(path, SpecificHandler, protocol, routes.GET).url(url_params)
     self._add_route(path, SpecificHandler, protocol, routes.PUT).url(url_params).body(body_params)
     self._add_route(path, SpecificHandler, protocol, routes.PATCH).url(url_params).body(body_params)
-    self._add_route(path, SpecificHandler, protocol, routes.DELETE).url(url_params)   
+    self._add_route(path, SpecificHandler, protocol, routes.DELETE).url(url_params)
 
 
 class Application(_RoutesShortHand):

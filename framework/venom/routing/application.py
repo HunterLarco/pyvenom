@@ -31,7 +31,10 @@ def generate_meta_handler(app):
       if raw_path.startswith('/'): raw_path = raw_path[1:]
       path = '{}/{}'.format(app._api_prefix, raw_path)
       meta = { 'meta': True, 'routes': [] }
+      method = self.query.get('method')
       for route in app.routes:
+        if method and not route.matches_method(method):
+          continue
         if route.matches_path(path):
           meta['routes'].append({
             'headers': self._removenull(dict(route._headers)['template']),

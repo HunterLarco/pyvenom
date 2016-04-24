@@ -67,9 +67,3 @@ version1.GET('/crazything/:foo/:bar', GroupsHandler).url({
   'date': venom.Parameters.Integer(),
   'random_string': venom.Parameters.String()
 }), 'ui-93486109347')
-
-
-version2 = venom.Application(version=2)
-
-
-version2.GET('/helloworld', HelloWorldHandler)

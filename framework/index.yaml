@@ -15,8 +15,9 @@ indexes:
 
 - kind: User
   properties:
-  - name: email
+  - name: age
   - name: password
+  - name: username
 
 - kind: User2
   properties:

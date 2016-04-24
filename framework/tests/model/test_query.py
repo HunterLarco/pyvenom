@@ -9,26 +9,13 @@ class QueryParameterTest(BasicTestCase):
     param = venom.QueryParameter()
     args = ['foo', 'bar', 'baz']
 
-    assert param.get_value(args, {}) == 'foo'
-    assert param.get_value(args, {}) == 'bar'
-    assert param.get_value(args, {}) == 'baz'
+    assert param.get_value(args) == 'foo'
+    assert param.get_value(args) == 'bar'
+    assert param.get_value(args) == 'baz'
     assert args == []
     
     with smart_assert.raises(IndexError) as context:
-      param.get_value(args, {})
-  
-  def test_kwargs_only(self):
-    param = venom.QueryParameter('foo')
-    kwargs = {
-      'foo': 'bar',
-      'bar': 'baz'
-    }
-
-    assert param.get_value([], kwargs) == 'bar'
-    assert kwargs == { 'bar': 'baz' }
-    
-    with smart_assert.raises(KeyError) as context:
-      param.get_value([], kwargs)
+      param.get_value(args)
 
 
 class PropComparisonTestProp(venom.Properties.Property):
@@ -53,7 +40,7 @@ class QueryLogicalOperatorTest(BasicTestCase):
     
     operator = venom.QueryLogicalOperator(foo == 123, bar == 456)
     with smart_assert.raises(ValueError) as context:
-      operator.to_search_query([], {})
+      operator.to_search_query([])
   
   def test_get_property_comparisons(self):
     foo = PropComparisonTestProp()
@@ -92,13 +79,13 @@ class QueryLogicalOperatorTest(BasicTestCase):
     bar._connect(name='bar')
     
     and_operator = venom.AND(foo > 1, bar != 18)
-    assert and_operator.to_search_query([], {}) == '(foo > 1 AND (NOT bar = 18))'
+    assert and_operator.to_search_query([]) == '(foo > 1 AND (NOT bar = 18))'
     
     or_operator = venom.OR(foo > 1, bar != 18)
-    assert or_operator.to_search_query([], {}) == '(foo > 1 OR (NOT bar = 18))'
+    assert or_operator.to_search_query([]) == '(foo > 1 OR (NOT bar = 18))'
     
     combined_operator = venom.AND(and_operator, or_operator)
-    assert combined_operator.to_search_query([], {}) == '((foo > 1 AND (NOT bar = 18)) AND (foo > 1 OR (NOT bar = 18)))'
+    assert combined_operator.to_search_query([]) == '((foo > 1 AND (NOT bar = 18)) AND (foo > 1 OR (NOT bar = 18)))'
   
   def test_to_datastore_query(self):
     foo = PropComparisonTestProp()
@@ -107,13 +94,13 @@ class QueryLogicalOperatorTest(BasicTestCase):
     bar._connect(name='bar')
     
     and_operator = venom.AND(foo > 1, bar != 18)
-    assert str(and_operator.to_datastore_query([], {})) == "OR(AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18)))"
+    assert str(and_operator.to_datastore_query([])) == "OR(AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18)))"
     
     or_operator = venom.OR(foo > 1, bar != 18)
-    assert str(or_operator.to_datastore_query([], {})) == "OR(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('bar', '>', 18))"
+    assert str(or_operator.to_datastore_query([])) == "OR(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('bar', '>', 18))"
     
     combined_operator = venom.AND(and_operator, or_operator)
-    assert str(combined_operator.to_datastore_query([], {})) == "OR(AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('foo', '>', 1)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('bar', '<', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('bar', '>', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18), FilterNode('foo', '>', 1)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18), FilterNode('bar', '<', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18), FilterNode('bar', '>', 18)))"
+    assert str(combined_operator.to_datastore_query([])) == "OR(AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('foo', '>', 1)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('bar', '<', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '<', 18), FilterNode('bar', '>', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18), FilterNode('foo', '>', 1)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18), FilterNode('bar', '<', 18)), AND(FilterNode('foo', '>', 1), FilterNode('bar', '>', 18), FilterNode('bar', '>', 18)))"
     
     
 class QueryTestProp(venom.Properties.Property):
@@ -139,7 +126,7 @@ class QueryTest(BasicTestCase):
     query = venom.Query(foo == 123, bar == 456)
     query._connect(name='query')
     
-    assert query.to_search_query([], {}) == '(foo = 123 AND bar = 456)'
+    assert query.to_search_query([]) == '(foo = 123 AND bar = 456)'
     assert query._name == 'query'
     assert query._model == None
     assert query._entity == None
@@ -175,11 +162,11 @@ class QueryTest(BasicTestCase):
     bar = QueryTestProp()
     bar._connect(name='bar')
     
-    query = venom.Query(foo == 123, bar == 456)
+    query = venom.Query(foo == venom.QP, bar == venom.QP)
     query._connect(name='query', entity=TestModel())
-    assert query(1, 2, 3, four=4) == []
+    assert query(123, 456) == []
     
-    query = venom.Query(foo < 123, bar != 456)
+    query = venom.Query(foo < venom.QP, bar != venom.QP)
     query._connect(name='query', entity=TestModel())
-    assert query(1, 2, 3, four=4) == []
+    assert query(123, bar=456) == []
     

@@ -241,53 +241,54 @@ class PropertyComparisonTest(BasicTestCase):
     prop = PropComparisonTestProp()
     prop._connect(name='prop')
     comparison = prop == 123
-    assert comparison.to_search_query([], {}) == 'prop = 123'
+    assert comparison.to_search_query([]) == 'prop = 123'
     comparison = prop < 123
-    assert comparison.to_search_query([], {}) == 'prop < 123'
+    assert comparison.to_search_query([]) == 'prop < 123'
     comparison = prop <= 123
-    assert comparison.to_search_query([], {}) == 'prop <= 123'
+    assert comparison.to_search_query([]) == 'prop <= 123'
     comparison = prop > 123
-    assert comparison.to_search_query([], {}) == 'prop > 123'
+    assert comparison.to_search_query([]) == 'prop > 123'
     comparison = prop >= 123
-    assert comparison.to_search_query([], {}) == 'prop >= 123'
+    assert comparison.to_search_query([]) == 'prop >= 123'
     comparison = prop != 123
-    assert comparison.to_search_query([], {}) == '(NOT prop = 123)'
+    assert comparison.to_search_query([]) == '(NOT prop = 123)'
     comparison = prop == 'bar = "foo"'
-    assert comparison.to_search_query([], {}) == 'prop = "bar = \\"foo\\""'
+    assert comparison.to_search_query([]) == 'prop = "bar = \\"foo\\""'
   
   def test_search_query_with_query_parameter(self):
     prop = PropComparisonTestProp()
     prop._connect(name='prop')
     comparison = prop == venom.QueryParameter()
-    assert comparison.to_search_query(['foo'], {}) == 'prop = "foo"'
-    assert comparison.to_search_query([123], {}) == 'prop = 123'
+    assert comparison.to_search_query(['foo']) == 'prop = "foo"'
+    assert comparison.to_search_query([123]) == 'prop = 123'
     comparison = prop == venom.QueryParameter('bar')
-    assert comparison.to_search_query([], { 'bar': 'foo' }) == 'prop = "foo"'
+    assert comparison.to_search_query(['foo']) == 'prop = "foo"'
   
   def test_datastore_query_without_query_parameter(self):
     prop = PropComparisonTestProp()
     prop._connect(name='prop')
     comparison = prop == '123'
-    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '=', '123')"
+    assert str(comparison.to_datastore_query([])) == "FilterNode('prop', '=', '123')"
     comparison = prop < '123'
-    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '<', '123')"
+    assert str(comparison.to_datastore_query([])) == "FilterNode('prop', '<', '123')"
     comparison = prop <= '123'
-    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '<=', '123')"
+    assert str(comparison.to_datastore_query([])) == "FilterNode('prop', '<=', '123')"
     comparison = prop > '123'
-    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '>', '123')"
+    assert str(comparison.to_datastore_query([])) == "FilterNode('prop', '>', '123')"
     comparison = prop >= '123'
-    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '>=', '123')"
+    assert str(comparison.to_datastore_query([])) == "FilterNode('prop', '>=', '123')"
     comparison = prop != '123'
-    assert str(comparison.to_datastore_query([], {})) == "OR(FilterNode('prop', '<', '123'), FilterNode('prop', '>', '123'))"
+    assert str(comparison.to_datastore_query([])) == "OR(FilterNode('prop', '<', '123'), FilterNode('prop', '>', '123'))"
   
   def test_datastore_query_with_query_parameter(self):
     prop = PropComparisonTestProp()
     prop._connect(name='prop')
     comparison = prop == venom.QueryParameter()
-    assert str(comparison.to_datastore_query(['foo'], {})) == "FilterNode('prop', '=', 'foo')"
-    assert str(comparison.to_datastore_query(['bar'], {})) == "FilterNode('prop', '=', 'bar')"
+    assert str(comparison.to_datastore_query(['foo'])) == "FilterNode('prop', '=', 'foo')"
+    assert str(comparison.to_datastore_query(['bar'])) == "FilterNode('prop', '=', 'bar')"
     comparison = prop == venom.QueryParameter('bar')
-    assert str(comparison.to_datastore_query([], { 'bar': 'foo' })) == "FilterNode('prop', '=', 'foo')"
+    args = comparison.to_query_arguments().apply(bar='foo')
+    assert str(comparison.to_datastore_query(args)) == "FilterNode('prop', '=', 'foo')"
   
   def test_uses_datastore(self):
     prop = PropComparisonTestProp()

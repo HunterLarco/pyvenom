@@ -121,8 +121,13 @@ class _RoutesShortHand(WSGIEntryPoint):
         if not query_name or not query_name in model._queries:
           return { 'entities': model.all(), 'query': 'all' }
         query = model._queries[query_name]
+        query_kwargs = {
+          key: value
+          for key, value in self.query.items()
+          if key != 'query'
+        }
         return {
-          'entities': query(**self.query),
+          'entities': query(**query_kwargs),
           'query': query_name
         }
       

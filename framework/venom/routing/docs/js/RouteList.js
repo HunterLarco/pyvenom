@@ -11,6 +11,7 @@
       this.$list = $('.js-RouteList');
       
       this.routes = [];
+      this.activeRoute = null;
 
       this.bindEvents();
       this.refresh();
@@ -29,7 +30,7 @@
       var routes = json.routes;
       for(var i=0,route; route=routes[i++];){
         for(var j=0,method; method=route.methods[j++];){
-          var newRoute = new Route(route.path, method);
+          var newRoute = new Route(this, route.path, method);
           this.routes.push(newRoute);
         }
       }
@@ -47,6 +48,12 @@
       for(var i=0,route; route=this.routes[i++];){
         this.$list.appendChild(route.$elem);
       }
+    },
+    triggerActivateRoute: function (route) {
+      if(!!this.activeRoute)
+        this.activeRoute.triggerDeactivate();
+      route.triggerActivate();
+      this.activeRoute = route;
     }
   };
   

@@ -5,8 +5,11 @@
 
 {% include 'css/resets/reset.css' %}
 {% include 'css/resets/box.css' %}
+{% include 'css/resets/webkit.css' %}
 
 {% include 'css/components/Layout.css' %}
+{% include 'css/components/RouteList.css' %}
+{% include 'css/components/Route.css' %}
 
 </style>
 
@@ -24,11 +27,24 @@
 
 
 <div class='Layout'>
-  <div class='Layout-Sidebar'></div>
+  <div class='Layout-Sidebar RouteList js-RouteList'></div>
   
   <div class='Layout-Content'></div>
 </div>
 
 
+<script>
+
+{% include 'js/polyfills/fetch.js' %}
+
+{% include 'js/util/selector.js' %}
+{% include 'js/util/creation.js' %}
+{% include 'js/util/classes.js' %}
+
+{% include 'js/Route.js' %}
+{% include 'js/RouteList.js' %}
+{% include 'js/main.js' %}
+
+</script>
 </body>
 </html>

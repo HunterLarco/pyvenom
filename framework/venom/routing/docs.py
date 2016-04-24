@@ -21,4 +21,4 @@ class Documentation(WSGIEntryPoint):
       'version': self.application.version
     }
     path = os.path.join(os.path.dirname(__file__), 'docs/index.html')
-    response.out.write(template.render(path, template_values))
+    response.write(template.render(path, template_values))

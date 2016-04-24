@@ -3,13 +3,25 @@
   flex-direction:row;
   
   height:100%;
+  
+  background:rgb(255,255,255);
+  
+  font-family:Helvetica, Arial;
+  font-size:16px;
 }
+
 .Layout-Sidebar{
-  flex:shrink:0;
+  flex-shrink:0;
   
   height:100%;
   overflow:scroll;
+  
+  background:rgb(244,244,244);
+  box-shadow:inset -1px 0px 0px rgb(140,140,140);
+  
+  min-width:200px;
 }
+
 .Layout-Content{
   flex:2;
   flex-shrink:0;

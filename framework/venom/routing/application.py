@@ -144,7 +144,7 @@ class _RoutesShortHand(WSGIEntryPoint):
         """
         query_name = self.query.get('query')
         if not query_name or not query_name in model._queries:
-          return { 'entities': model.all(), 'query': 'all' }
+          query_name = 'all'
         query = model._queries[query_name]
         query_kwargs = {
           key: value
@@ -153,7 +153,8 @@ class _RoutesShortHand(WSGIEntryPoint):
         }
         return {
           'entities': query(**query_kwargs),
-          'query': query_name
+          'query': query_name,
+          'type': model.kind
         }
       
       def post(self):

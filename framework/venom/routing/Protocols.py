@@ -7,11 +7,12 @@ __all__ = ['Protocol', 'TextProtocol', 'JSONProtocol']
 
 
 class Protocol(object):
-  def __init__(self, request, response, error):
+  def __init__(self, request, response, error, errors):
     super(Protocol, self).__init__()
     self.request = request
     self.response = response
     self.error = error
+    self.errors = errors
   
   def _read(self, value):
     return self.read(value)
@@ -49,8 +50,12 @@ class Protocol(object):
     self.error(500)
     traceback.print_exc()
     try:
+      code = self.errors[exception_type] if exception_type in self.errors else -1
+      message = exception_value
       self._write({
-        'message': 'An unknown error occured'
+        'message': str(exception_value),
+        'success': False,
+        'code': code
       })
     except Exception:
       traceback.print_exc()

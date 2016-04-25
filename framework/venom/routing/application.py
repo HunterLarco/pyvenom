@@ -10,6 +10,7 @@ from handlers import RequestHandler
 from ..__ui__ import ui
 from ..model import Model
 import Parameters
+from ..model import Properties
 import docs
 
 
@@ -214,10 +215,19 @@ class Application(_RoutesShortHand):
   allowed_prefixes = frozenset(('api', 'meta', 'routes', 'docs'))
   internal_protocol = Protocols.JSONProtocol
   
-  def __init__(self, routes=None, version=1, protocol=Protocols.JSONProtocol):
+  default_errors = {
+    Properties.PropertyValidationFailed: 201,
+    Parameters.ParameterCastingFailed: 300,
+    Parameters.ParameterValidationFailed: 301
+  }
+  
+  def __init__(self, routes=None, version=1, protocol=Protocols.JSONProtocol, errors=None):
     super(Application, self).__init__(protocol=protocol)
     self.routes = routes if routes else []
+    self.errors = errors if errors else {}
     self.version = version
+    
+    self.errors = dict(self.errors.items() + self.default_errors.items())
     
     self._api_prefix = '/{}/v{}'.format('api', version)
     self._meta_prefix = '/{}/v{}'.format('meta', version)
@@ -233,7 +243,7 @@ class Application(_RoutesShortHand):
     if route == None:
       error(404)
       return
-    route.handle(request, response, error)
+    route.handle(request, response, error, errors=self.errors)
   
   def find_route(self, path, method):
     for route in self.routes:

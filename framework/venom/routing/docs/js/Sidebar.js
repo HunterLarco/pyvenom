@@ -1,15 +1,15 @@
 'use strict';
 (function (root) {
   
-  function Sidebar () {
-    this.init();
+  function Sidebar (sidebar, drag_over) {
+    this.init(sidebar, drag_over);
   }
   
   Sidebar.prototype = {
-    init: function () {
+    init: function (sidebar, drag_over) {
       // Cache all the elements first on the instance
-      this.$layout = $('.js-Layout');
-      this.$sidebar = $('.js-Sidebar', this.$layout);
+      this.$layout = $(drag_over);
+      this.$sidebar = $(sidebar, this.$layout);
       this.$dragger = $('.js-SidebarDragger', this.$sidebar);
       
       this._onUp = this.handleMouseUp.bind(this);
@@ -32,6 +32,8 @@
     },
     handleMouseMove: function (event) {
       var diffX = event.pageX - this._mouseStartX;
+      if(classes.has('right', this.$dragger))
+        diffX *= -1;
       var width = this._startOffset + diffX;
       
       this.$sidebar.style.width = width + 'px';

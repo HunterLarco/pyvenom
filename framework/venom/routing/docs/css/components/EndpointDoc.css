@@ -2,14 +2,11 @@
   display:flex;
   flex-direction:column;
   
-  max-width:800px;
-  
   height:100%;
   overflow:hidden;
   
   color:rgb(51,51,51);
-  background:rgb(255,255,255);
-  box-shadow: 1px 0px 0px rgb(140, 140, 140);
+  box-shadow:inset -1px 0px 0px rgb(140, 140, 140);
 }
 
 .EndpointDoc-Content{
@@ -34,6 +31,7 @@
 }
 
 .EndpointDoc-Title{
+  margin-right:1px;
   display:block;
   flex-shrink:0;
   background-image: linear-gradient(to bottom, white, rgb(250, 250, 250));

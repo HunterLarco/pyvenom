@@ -28,33 +28,6 @@
   min-width:220px;
   max-width: 50%;
 }
-.Layout-Sidebar .Layout-SidebarDragger{
-  content:'';
-  display:block;
-  
-  position:absolute;
-  z-index:999;
-  right:0px;
-  top:0px;
-  height:100%;
-  
-  width:10px;
-  margin-right:-5px;
-  
-  cursor:ew-resize;
-}
-.Layout.dragging .Layout-SidebarDragger{
-  width:300px;
-  margin-right:-150px;
-}
-.Layout.dragging{
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;                          
-}
 
 .Layout-SidebarHeader{
   flex-shrink: 0;
@@ -74,12 +47,31 @@
 
 .Layout-Content{
   display:block;
+  position:relative;
   
-  background:rgb(244,244,244);
+  background:rgb(255, 255, 255);
   
   flex: 2;
   flex-shrink: 0;
   
+  min-width:50%;
+  
   height: 100%;
-  overflow: scroll;
+  overflow: visible;
+}
+
+.Layout-Explorer{
+  display:block;
+  position:relative;
+  
+  background:rgb(244,244,244);
+  
+  flex-shrink: 0;
+  
+  min-width:220px;
+  width:220px;
+  max-width: 50%;
+  
+  height: 100%;
+  overflow: visible;
 }

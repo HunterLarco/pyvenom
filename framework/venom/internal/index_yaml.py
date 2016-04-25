@@ -24,8 +24,13 @@ def update_index_yaml(models):
   
   schemas = map(lambda model: model._schema, models)
   generator = IndexGenerator(yaml=index, schemas=schemas)
+  generated = generator.generate()
+  
+  if generated.strip() == index.strip():
+    return False
+  
   with bfile('index.yaml', 'w+') as f:
-    f.write(generator.generate())
+    f.write(generated)
   
   return True
 

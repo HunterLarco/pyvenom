@@ -194,6 +194,7 @@ class Model(object):
     json = {
       key: prop._get_value(self)
       for key, prop in self._properties.items()
+      if not prop.hidden
     }
     json['key'] = self.key
     return json
@@ -203,6 +204,7 @@ class Model(object):
     for key, prop_schema in entity._schema.items():
       prop = prop_schema.property
       value = prop._get_stored_value(entity)
+      prop._validate_before_save(entity, value)
       if prop_schema.search and value != None:
         field = prop.to_search_field()
         entity.hybrid_entity.set(key, value, field)

@@ -4,7 +4,7 @@ from google.appengine.api import search
 
 # package imports
 from attribute import ModelAttribute
-from query import PropertyComparison
+from query import PropertyComparison, Query, QueryParameter
 from ..routing import Parameters
 
 
@@ -23,9 +23,11 @@ class Property(ModelAttribute):
   allowed_operators = frozenset()
   allowed_types = frozenset()
   
-  def __init__(self, required=False):
+  def __init__(self, required=False, hidden=False, unique=False):
     super(Property, self).__init__()
     self.required = required
+    self.hidden = hidden
+    self.unique = unique
   
   def __equals__(self, value):
     cls = self.__class__
@@ -40,17 +42,36 @@ class Property(ModelAttribute):
     super(Property, self)._connect(entity=entity, name=name, model=model)
     if entity and not hasattr(entity, '_values'):
       setattr(entity, '_values', {})
+    if model and self.unique:
+      setattr(model, '_by_{}'.format(name), Query(self == QueryParameter))
   
-  def validate(self, value):
+  def validate(self, entity, value):
+    self._validate_required(value)
+    self._validate_types(value)
+  
+  def _validate_before_save(self, entity, value):
+    self._validate_unique(entity, value)
+  
+  def _validate_required(self, value):
     if self.required and value == None:
       raise PropertyValidationFailed('Required property was None')
-    
+  
+  def _validate_types(self, value):
     if value != None and len(self.allowed_types) > 0:
       for allowed_type in self.allowed_types:
         if isinstance(value, allowed_type):
           break
       else:
         raise PropertyValidationFailed('Property value does not conform to allowed_types')
+  
+  def _validate_unique(self, entity, value):
+    if not self.unique: return
+    query = getattr(self._model, '_by_{}'.format(self._name))
+    results = query(value)
+    
+    for result in results:
+      if result.key != entity.key:
+        raise PropertyValidationFailed('Property {} was not unique when expected'.format(self._name))
   
   def to_search_field(self):
     raise NotImplementedError()
@@ -71,7 +92,7 @@ class Property(ModelAttribute):
     return self._set_value(instance, value)
   
   def _set_value(self, entity, value):
-    self.validate(value)
+    self.validate(entity, value)
     entity._values[self._name] = value
   
   def _get_value(self, entity):
@@ -126,12 +147,12 @@ class Property(ModelAttribute):
 
 
 class ChoicesProperty(Property):
-  def __init__(self, required=False, choices=None):
-    super(ChoicesProperty, self).__init__(required=required)
+  def __init__(self, required=False, choices=None, hidden=False, unique=False):
+    super(ChoicesProperty, self).__init__(required=required, hidden=hidden, unique=unique)
     self.choices = choices
   
-  def validate(self, value):
-    super(ChoicesProperty, self).validate(value)
+  def validate(self, entity, value):
+    super(ChoicesProperty, self).validate(entity, value)
     self._validate_choices(value)
   
   def _validate_choices(self, value):
@@ -144,8 +165,8 @@ class Integer(ChoicesProperty):
   allowed_operators = PropertyComparison.allowed_operators
   allowed_types = frozenset({int})
   
-  def __init__(self, required=False, choices=None, min=None, max=None):
-    super(Integer, self).__init__(required=required, choices=choices)
+  def __init__(self, required=False, choices=None, min=None, max=None, hidden=False, unique=False):
+    super(Integer, self).__init__(required=required, choices=choices, hidden=hidden, unique=unique)
     self.min = min
     self.max = max
     
@@ -154,8 +175,8 @@ class Integer(ChoicesProperty):
       return None
     return int(value)
     
-  def validate(self, value):
-    super(Integer, self).validate(value)
+  def validate(self, entity, value):
+    super(Integer, self).validate(entity, value)
     if value == None: return
     self._validate_min(value)
     self._validate_max(value)
@@ -217,8 +238,8 @@ class String(ChoicesProperty):
   allowed_operators = PropertyComparison.allowed_operators
   allowed_types = [str, unicode]
   
-  def __init__(self, required=False, choices=None, min=None, max=500, characters=None):
-    super(String, self).__init__(required=required, choices=choices)
+  def __init__(self, required=False, choices=None, min=None, max=500, characters=None, hidden=False, unique=False):
+    super(String, self).__init__(required=required, choices=choices, hidden=hidden, unique=unique)
     self.min = min
     self.max = max
     self.characters = characters
@@ -233,8 +254,8 @@ class String(ChoicesProperty):
       return value
     return str(value)
   
-  def validate(self, value):
-    super(String, self).validate(value)
+  def validate(self, entity, value):
+    super(String, self).validate(entity, value)
     if value == None: return
     self._validate_min(value)
     self._validate_max(value)
@@ -275,10 +296,29 @@ class String(ChoicesProperty):
     )
 
 
+class UUID(String):
+  allowed_operators = frozenset({
+    PropertyComparison.EQ
+  })
+  
+  def __init__(self, required=False, hidden=False):
+    super(UUID, self).__init__(required=required, hidden=hidden)
+  
+  def _connect(self, entity=None, name=None, model=None):
+    super(String, self)._connect(entity=entity, name=name, model=model)
+    if entity:
+      import uuid
+      token = str(uuid.uuid1())
+      self._set_value(entity, token)
+    
+
 class Password(String):
   allowed_operators = frozenset({
     PropertyComparison.EQ
   })
+  
+  def __init__(self, required=False, choices=None, min=None, max=500, characters=None, unique=False):
+    super(Password, self).__init__(required=required, choices=choices, min=min, max=max, characters=characters, hidden=True, unique=unique)
   
   def _hash(self, value):
     if value == None: return value
@@ -286,7 +326,7 @@ class Password(String):
     return hashlib.sha256(value).hexdigest()
   
   def _set_value(self, entity, value):
-    self.validate(value)
+    self.validate(entity, value)
     entity._values[self._name] = self._hash(value)
 
   def _get_stored_value(self, entity):
@@ -301,8 +341,8 @@ class Model(Property):
     PropertyComparison.EQ
   })
   
-  def __init__(self, model, required=False):
-    super(Model, self).__init__(required=required)
+  def __init__(self, model, required=False, hidden=False, unique=False):
+    super(Model, self).__init__(required=required, hidden=hidden, unique=unique)
     self.model = model
 
   def _get_value(self, entity):

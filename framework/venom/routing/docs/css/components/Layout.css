@@ -68,8 +68,8 @@
   
   flex-shrink: 0;
   
-  min-width:220px;
-  width:220px;
+  min-width:20px;
+  width:20%;
   max-width: 50%;
   
   height: 100%;

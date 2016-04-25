@@ -7,7 +7,7 @@
   padding:2px 6px;
   margin:0px 3px;
   font-size:12px;
-  font-weight:500;
+  font-weight:700;
   
   border-radius:2px;
   background:rgba(0,100,200,0.125);
@@ -16,7 +16,7 @@
 .UrlParameter:before{
   content:'var ';
   
-  font-weight:700;
+  font-weight:300;
 }
 
 .Route.active .UrlParameter{

@@ -75,6 +75,8 @@
 .Layout-Content{
   display:block;
   
+  background:rgb(244,244,244);
+  
   flex: 2;
   flex-shrink: 0;
   

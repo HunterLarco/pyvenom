@@ -1,3 +1,7 @@
+# system imports
+import datetime
+import time
+
 # app engine imports
 from google.appengine.ext import ndb
 from google.appengine.api import search
@@ -385,7 +389,7 @@ class Model(Property):
     value = super(Model, self)._get_value(entity)
     if value and not isinstance(value, self.model):
       value = self.model.get(value)
-    self._set_value(entity, value)
+    entity._values[self._name] = value
     return value
 
   def _to_storage(self, value):
@@ -406,3 +410,31 @@ class Model(Property):
   
   def to_route_parameter(self):
     return Parameters.Model(self.model, required = self.required)
+
+
+class DateTime(Float):
+  allowed_types = frozenset({datetime.datetime})
+  
+  def __init__(self, required=False, choices=None, min=None, max=None, hidden=False, unique=False, set_on_creation=False, set_on_update=False):
+    super(Float, self).__init__(required=required, choices=choices, hidden=hidden, unique=unique, min=min, max=max)
+    self.set_on_creation = set_on_creation
+    self.set_on_update = set_on_update
+  
+  def _to_storage(self, value):
+    if value == None: return None
+    timestamp = time.mktime(value.timetuple())
+    return super(DateTime, self)._from_storage(timestamp)
+  
+  def _from_storage(self, value):
+    value = super(DateTime, self)._from_storage(value)
+    if value == None: return None
+    return datetime.datetime.fromtimestamp(value)
+  
+  def _validate_before_save(self, entity, value):
+    super(DateTime, self)._validate_before_save(entity, value)
+    
+    if self.set_on_creation and not entity.key:
+      self._set_value(entity, datetime.datetime.now())
+    
+    if self.set_on_update:
+      self._set_value(entity, datetime.datetime.now())

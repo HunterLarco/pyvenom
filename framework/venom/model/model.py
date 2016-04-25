@@ -207,6 +207,7 @@ class Model(object):
       prop = prop_schema.property
       value = prop._get_stored_value(entity)
       prop._validate_before_save(entity, value)
+      value = prop._get_stored_value(entity)
       if prop_schema.search and value != None:
         field = prop.to_search_field()
         entity.hybrid_entity.set(key, value, field)

@@ -1,0 +1,83 @@
+.Layout{
+  display: flex;
+  flex-direction: row;
+  
+  height: 100%;
+  
+  background: rgb(255, 255, 255);
+  
+  font-family: Helvetica,  Arial;
+  font-size: 16px;
+}
+
+.Layout-Sidebar{
+  position:relative;
+  
+  display:flex;
+  flex-direction:column;
+  
+  flex-shrink: 0;
+  
+  height: 100%;
+  overflow: visible;
+  
+  background: rgb(244, 244, 244);
+  box-shadow: inset -1px 0px 0px rgb(140, 140, 140);
+  
+  width: 220px;
+  min-width:220px;
+  max-width: 50%;
+}
+.Layout-Sidebar .Layout-SidebarDragger{
+  content:'';
+  display:block;
+  
+  position:absolute;
+  z-index:999;
+  right:0px;
+  top:0px;
+  height:100%;
+  
+  width:10px;
+  margin-right:-5px;
+  
+  cursor:ew-resize;
+}
+.Layout.dragging .Layout-SidebarDragger{
+  width:300px;
+  margin-right:-150px;
+}
+.Layout.dragging{
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;                          
+}
+
+.Layout-SidebarHeader{
+  flex-shrink: 0;
+  overflow: hidden;
+  
+  margin-right:1px;
+  
+  background: rgb(255, 255, 255);
+  box-shadow: inset 0px -1px 0px rgb(163, 163, 163);
+}
+.Layout-SidebarContent{
+  flex:2;
+  flex-shrink: 0;
+  
+  overflow:scroll;
+}
+
+.Layout-Content{
+  display:block;
+  
+  flex: 2;
+  flex-shrink: 0;
+  
+  height: 100%;
+  overflow: scroll;
+}

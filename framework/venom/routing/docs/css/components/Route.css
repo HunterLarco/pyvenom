@@ -1,0 +1,41 @@
+.Route {
+  display: block;
+  
+  padding: 7px 10px;
+  margin-right:1px;
+  
+  white-space:nowrap;
+  
+  cursor:pointer;
+}
+
+.Route-Path {
+  display: block;
+  margin-bottom: 4px;
+  
+  color: rgb(0, 0, 0);
+}
+
+.Route-Method {
+  display: block;
+  
+  text-transform:uppercase;
+  color: rgb(138, 138, 138);
+  font-size: 11px;
+}
+
+.Route.active{
+  background: rgb(14, 82, 234);
+  margin-right:0px;
+  
+  cursor:default;
+}
+.Route:hover:not(.active){
+  background:rgb(230,230,230);
+}
+.Route.active .Route-Path{
+  color: rgb(255, 255, 255);
+}
+.Route.active .Route-Method{
+  color: rgb(143, 179, 242);
+}

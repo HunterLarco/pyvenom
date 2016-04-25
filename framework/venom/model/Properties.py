@@ -4,12 +4,16 @@ from google.appengine.api import search
 
 # package imports
 from attribute import ModelAttribute
-from query import PropertyComparison
+from query import PropertyComparison, QueryArgument
 from ..routing import Parameters
 
 
-__all__  = ['Property']
-__all__ += ['InvalidPropertyComparison', 'PropertyValidationFailed']
+__all__  = [
+  'Property', 'ChoicesProperty', 'String', 'Integer',
+  'Float', 'Model', 'Password',
+  'LocationComparison', 'RelativeLocation', 'Location',
+  'InvalidPropertyComparison', 'PropertyValidationFailed'
+]
 
 
 class InvalidPropertyComparison(Exception):
@@ -215,7 +219,7 @@ class Float(Integer):
 
 class String(ChoicesProperty):
   allowed_operators = PropertyComparison.allowed_operators
-  allowed_types = [str, unicode]
+  allowed_types = frozenset({str, unicode})
   
   def __init__(self, required=False, choices=None, min=None, max=500, characters=None):
     super(String, self).__init__(required=required, choices=choices)
@@ -330,3 +334,132 @@ class Model(Property):
   
   def to_route_parameter(self):
     return Parameters.Model(self.model, required = self.required)
+
+
+class LocationComparison(PropertyComparison):
+  
+  def __init__(self, property, operator, value, lat, lon):
+    super(LocationComparison, self).__init__(property, operator, value)
+    self.lat = lat
+    self.lon = lon
+    
+  
+  def to_query_arguments(self):
+    return self._value_to_query_arguments(
+      self.value,
+      self.lat,
+      self.lon
+    )
+  
+  def _value_to_query_arguments(self, value):
+    if isinstance(value, QueryParameter):
+      if value.key:
+        return QueryArgumentList([ QueryArgument(value.key, optional_key=False) ])
+      return QueryArgumentList([ QueryArgument(self.property._name, optional_key=True) ])
+    elif inspect.isclass(self.value) and issubclass(self.value, QueryParameter):
+      return QueryArgumentList([ QueryArgument(self.property._name, optional_key=True) ])
+    return QueryArgumentList()
+  
+  def get_property_comparisons(self):
+    return [self]
+  
+  def to_datastore_query(self, args):
+    pass
+  
+  def to_search_query(self, args):
+    value = self.value
+    if isinstance(self.value, QueryParameter):
+      value = self.value.get_value(args)
+    elif inspect.isclass(self.value) and issubclass(self.value, QueryParameter):
+      value = self.value().get_value(args)
+    value = self.property._to_storage(value)
+    if isinstance(value, str):
+      value = '"{}"'.format(value.replace('"', '\\"'))
+    if self.operator == self.NE:
+      return '(NOT {} = {})'.format(self.property._name, value)
+    return '{} {} {}'.format(self.property._name, self.operator, value)
+
+
+class RelativeLocation(object):
+  def __init__(self, property, lat, lon):
+    self.property = property
+    self.lat = lat
+    self.lon = lon
+  
+  def __le__(self, value):
+    return LocationComparison(self.property, PropertyComparison.LE, value, self.lat, self.lon)
+  
+  def __lt__(self, value):
+    return LocationComparison(self.property, PropertyComparison.LT, value, self.lat, self.lon)
+  
+  def __gt__(self, value):
+    return LocationComparison(self.property, PropertyComparison.GT, value, self.lat, self.lon)
+  
+  def __ge__(self, value):
+    return LocationComparison(self.property, PropertyComparison.GE, value, self.lat, self.lon)
+
+
+class Location(Property):
+  allowed_types = frozenset({list, tuple, dict})
+  
+  def __init__(self, required=False):
+    super(Location, self).__init__(required=required)
+  
+  def _set_value(self, entity, value):
+    lat, lon = self.validate(value)
+    entity._values[self._name] = [lat, lon]
+  
+  def validate(self, value):
+    super(Location, self).validate(value)
+    if value == None: return
+    
+    if isinstance(value, dict):
+      lat, lon = self._validate_dict(value)
+    else:
+      lat, lon = self._validate_iterable(value)
+    Float(required=True, min=-90, max=90).validate(lat)
+    Float(required=True, min=-180, max=180).validate(lon)
+    
+    return lat, lon
+    
+  def _validate_iterable(self, value):
+    if len(value) != 2:
+      raise PropertyValidationFailed('LocationProperty must store two values, latitude and longitude')
+    return value
+  
+  def _validate_dict(self, value):
+    if 'latitude' in value and 'longitude' in value:
+      lat = value['latitude']
+      lon = value['longitude']
+    elif 'lat' in value and 'lon' in value:
+      lat = value['lat']
+      lon = value['lon']
+    else:
+      raise Exception('LocationProperty expected {lat, lon} or {latitude, longitude}')
+    return lat, lon
+    
+  def _to_storage(self, value):
+    lat, lon = value
+    return search.GeoPoint(lat, lon)
+  
+  def _from_storage(self, value):
+    return [value.lat, value.lon]
+  
+  def to_search_field(self):
+    return search.GeoField
+  
+  def to_datastore_property(self):
+    return ndb.GeoPtProperty
+  
+  def query_uses_datastore(self, operator, value):
+    return False
+  
+  def to_route_parameter(self):
+    return Parameters.Dict({
+      'latitude': Parameters.Float(required=True, min=-90, max=90),
+      'longitude': Parameters.Float(required=True, min=-180, max=180)
+    }, required=self.required)
+  
+  def distance_to(self, lat, lon):
+    return RelativeLocation(self, lat, lon)
+    

@@ -35,6 +35,8 @@
 .KeyValueList-Attribute{
   white-space:nowrap;
   display:inline;
+  
+  margin-right:8px;
 }
 
 .KeyValueList-Key,

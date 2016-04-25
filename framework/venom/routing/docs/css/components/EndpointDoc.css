@@ -17,6 +17,13 @@
   border-bottom:1px solid rgb(146, 146, 146);
 }
 
+.EndpointDoc-DocString{
+  display:block;
+  word-wrap:pre;
+  margin:10px 0px;
+  font-size:14px;
+}
+
 .EndpointDoc-Title{
   background-image: linear-gradient(to bottom, white, rgb(250, 250, 250));
   font-size:22px;

@@ -216,9 +216,9 @@ class Application(_RoutesShortHand):
   internal_protocol = Protocols.JSONProtocol
   
   default_errors = {
-    Properties.PropertyValidationFailed: 201,
-    Parameters.ParameterCastingFailed: 300,
-    Parameters.ParameterValidationFailed: 301
+    Parameters.ParameterCastingFailed    : 1000,
+    Parameters.ParameterValidationFailed : 1001,
+    Properties.PropertyValidationFailed  : 2000,
   }
   
   def __init__(self, routes=None, version=1, protocol=Protocols.JSONProtocol, errors=None):

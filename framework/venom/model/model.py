@@ -165,6 +165,8 @@ class Model(object):
   
   @classmethod
   def _entity_to_model(cls, hybrid_entity):
+    if not hybrid_entity:
+      return None
     ndb_entity = hybrid_entity.datastore_entity.get_entity()
     properties = {name: prop._get_value(ndb_entity) for name, prop in ndb_entity._properties.items()}
     entity = cls()

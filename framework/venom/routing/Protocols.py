@@ -48,15 +48,20 @@ class Protocol(object):
   def _exit_error(self, exception_type, exception_value, exception_traceback):
     self._apply_headers()
     self.error(500)
-    traceback.print_exc()
     try:
-      code = self.errors[exception_type] if exception_type in self.errors else -1
-      message = exception_value
-      self._write({
-        'message': str(exception_value),
-        'success': False,
-        'code': code
-      })
+      if exception_type in self.errors:
+        self._write({
+          'message': str(exception_value),
+          'success': False,
+          'code': self.errors[exception_type]
+        })
+      else:
+        traceback.print_exc()
+        self._write({
+          'message': 'An unknown error occured. Check the server logs for more information',
+          'success': False,
+          'code': -1
+        })
     except Exception:
       traceback.print_exc()
   

@@ -1,5 +1,6 @@
 # system imports
 import re
+import traceback
 
 
 __all__ = [
@@ -25,24 +26,33 @@ class Parameter(object):
     super(Parameter, self).__init__()
     self.required = required
   
-  def load(self, value):
+  def load(self, key, value):
     if value == None:
       if self.required:
-        raise ParameterValidationFailed('Parameter was None when required')
+        raise ParameterValidationFailed(
+          "'{}' field was not found, but is required"
+          .format(key, value)
+        )
       return None
     
     try:
-      value = self.cast(value)
-    except:
-      raise ParameterCastingFailed('Parameter failed casting')
+      value = self.cast(key, value)
+    except Exception as err:
+      if isinstance(err, ParameterCastingFailed):
+        raise
+      traceback.print_exc()
+      raise ParameterCastingFailed(
+        "'{}' failed casting without specifying a reason"
+        .format(key)
+      )
       
-    self.validate(value)
+    self.validate(key, value)
     return value
   
-  def cast(self, value):
+  def cast(self, key, value):
     return value
   
-  def validate(self, value):
+  def validate(self, key, value):
     pass
   
   def __iter__(self):
@@ -124,14 +134,17 @@ class ChoicesParameter(Parameter):
     super(ChoicesParameter, self).__init__(required=required)
     self.choices = choices
   
-  def validate(self, value):
-    super(ChoicesParameter, self).validate(value)
-    self._validate_choices(value)
+  def validate(self, key, value):
+    super(ChoicesParameter, self).validate(key, value)
+    self._validate_choices(key, value)
   
-  def _validate_choices(self, value):
+  def _validate_choices(self, key, value):
     if self.choices == None: return
     if not value in self.choices:
-      raise ParameterValidationFailed('Parameter value not found in allowable choices')
+      raise ParameterValidationFailed(
+        "'{}' field must be one of {} but instead it was '{}'"
+        .format(key, self.choices, value)
+      )
 
 
 class String(ChoicesParameter):
@@ -158,36 +171,48 @@ class String(ChoicesParameter):
       pattern = '{}$'.format(pattern)
     return pattern
   
-  def cast(self, value):
+  def cast(self, key, value):
     return str(value)
   
-  def validate(self, value):
-    super(String, self).validate(value)
-    self._validate_min(value)
-    self._validate_max(value)
-    self._validate_characters(value)
-    self._validate_pattern(value)
+  def validate(self, key, value):
+    super(String, self).validate(key, value)
+    self._validate_min(key, value)
+    self._validate_max(key, value)
+    self._validate_characters(key, value)
+    self._validate_pattern(key, value)
   
-  def _validate_min(self, value):
+  def _validate_min(self, key, value):
     if self.min == None: return
     if len(value) < self.min:
-      raise ParameterValidationFailed('StringParameter value length was less than min')
+      raise ParameterValidationFailed(
+        "'{}' field requires at least {} characters but was provided '{}' of length {}"
+        .format(key, self.min, value, len(value))
+      )
   
-  def _validate_max(self, value):
+  def _validate_max(self, key, value):
     if self.max == None: return
     if len(value) > self.max:
-      raise ParameterValidationFailed('StringParameter value length was greater than max')
+      raise ParameterValidationFailed(
+        "'{}' field requires at most {} characters but was provided '{}' of length {}"
+        .format(key, self.max, value, len(value))
+      )
   
-  def _validate_characters(self, value):
+  def _validate_characters(self, key, value):
     if self.characters == None: return
-    difference = len(set(value) - set(self.characters))
-    if difference > 0:
-      raise ParameterValidationFailed('StringParameter value used disallowed characters')
+    difference = set(value) - set(self.characters)
+    if len(difference) > 0:
+      raise ParameterValidationFailed(
+        "'{}' field can only contain characters from '{}' but found characters from '{}'"
+        .format(key, ''.join(self.characters), ''.join(difference))
+      )
   
-  def _validate_pattern(self, value):
+  def _validate_pattern(self, key, value):
     if self.pattern == None: return
     if not re.match(self.pattern, value):
-      raise ParameterValidationFailed('StringParameter did not adhere to pattern')
+      raise ParameterValidationFailed(
+        "'{}' field must match pattern '{}' but was given '{}'"
+        .format(key, self.pattern, value)
+      )
   
   
 class Integer(ChoicesParameter):
@@ -202,27 +227,33 @@ class Integer(ChoicesParameter):
     self.min = min
     self.max = max
   
-  def cast(self, value):
+  def cast(self, key, value):
     return int(value)
   
-  def validate(self, value):
-    super(Integer, self).validate(value)
-    self._validate_min(value)
-    self._validate_max(value)
+  def validate(self, key, value):
+    super(Integer, self).validate(key, value)
+    self._validate_min(key, value)
+    self._validate_max(key, value)
   
-  def _validate_min(self, value):
+  def _validate_min(self, key, value):
     if self.min == None: return
     if value < self.min:
-      raise ParameterValidationFailed('IntegerParameter value was less than min')
+      raise ParameterValidationFailed(
+        "'{}' field must be at least {} but was {}"
+        .format(key, self.min, value)
+      )
   
-  def _validate_max(self, value):
+  def _validate_max(self, key, value):
     if self.max == None: return
     if value > self.max:
-      raise ParameterValidationFailed('IntegerParameter value was greater than max')
+      raise ParameterValidationFailed(
+        "'{}' field must be at most {} but was {}"
+        .format(key, self.max, value)
+      )
 
 
 class Float(Integer):
-  def cast(self, value):
+  def cast(self, key, value):
     return float(value)
 
 
@@ -244,19 +275,19 @@ class Dict(Parameter):
         template[key] = Dict(value)
     return template
   
-  def cast(self, value):
+  def cast(self, key, value):
     return dict(value)
   
-  def validate(self, value):
-    super(Dict, self).validate(value)
-    self._validate_template(value)
+  def validate(self, key, value):
+    super(Dict, self).validate(key, value)
+    self._validate_template(key, value)
   
-  def _validate_template(self, value):
+  def _validate_template(self, root_key, value):
     for key, param in self.template.items():
       if not isinstance(param, Parameter):
         continue
       param_value = value[key] if key in value else None
-      value[key] = param.load(param_value)
+      value[key] = param.load('{}.{}'.format(root_key, key), param_value)
 
 
 class List(Parameter):
@@ -280,28 +311,34 @@ class List(Parameter):
       raise Exception('List template must be a dict or Parameter instance')
     return template
   
-  def cast(self, value):
+  def cast(self, key, value):
     return list(value)
   
-  def validate(self, value):
-    super(List, self).validate(value)
-    self._validate_min(value)
-    self._validate_max(value)
-    self._validate_template(value)
+  def validate(self, key, value):
+    super(List, self).validate(key, value)
+    self._validate_min(key, value)
+    self._validate_max(key, value)
+    self._validate_template(key, value)
   
-  def _validate_template(self, value):
+  def _validate_template(self, root_key, value):
     for i, item in enumerate(value):
-      value[i] = self.template.load(item)
+      value[i] = self.template.load('{}[{}]'.format(root_key, i), item)
   
-  def _validate_min(self, value):
+  def _validate_min(self, key, value):
     if self.min == None: return
     if len(value) < self.min:
-      raise ParameterValidationFailed('ListParameter value length was less than min')
+      raise ParameterValidationFailed(
+        "'{}' field's length must be at least {} but was {}"
+        .format(key, self.min, len(value))
+      )
   
-  def _validate_max(self, value):
+  def _validate_max(self, key, value):
     if self.max == None: return
     if len(value) > self.max:
-      raise ParameterValidationFailed('ListParameter value length was greater than max')
+      raise ParameterValidationFailed(
+        "'{}' field's length must be at most {} but was {}"
+        .format(key, self.max, len(value))
+      )
 
 
 class Model(Parameter):
@@ -313,11 +350,14 @@ class Model(Parameter):
     self.model = model
     self.modelname = model.__name__
   
-  def cast(self, value):
-    value = super(Model, self).cast(value)
+  def cast(self, key, value):
+    value = super(Model, self).cast(key, value)
     return self.model.get(value)
   
-  def validate(self, value):
-    super(Model, self).validate(value)
+  def validate(self, key, value):
+    super(Model, self).validate(key, value)
     if not value:
-      raise Exception('Entity not found')
+      raise ParameterValidationFailed(
+        "'{}' field found no entity from model {} matching the provided key"
+        .format(key, self.model.kind)
+      )

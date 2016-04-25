@@ -8,8 +8,11 @@ from query import PropertyComparison, Query, QueryParameter
 from ..routing import Parameters
 
 
-__all__  = ['Property']
-__all__ += ['InvalidPropertyComparison', 'PropertyValidationFailed']
+__all__  = [
+  'Property', 'ChoicesProperty', 'Integer', 'Float', 'String',
+  'Password', 'UUID', 'Model',
+  'InvalidPropertyComparison', 'PropertyValidationFailed'
+]
 
 
 class InvalidPropertyComparison(Exception):
@@ -44,6 +47,8 @@ class Property(ModelAttribute):
       setattr(entity, '_values', {})
     if model and self.unique:
       setattr(model, '_by_{}'.format(name), Query(self == QueryParameter))
+    if name:
+      self._code_name = '{}.{}'.format(self._model.kind, name)
   
   def validate(self, entity, value):
     self._validate_required(value)
@@ -54,7 +59,10 @@ class Property(ModelAttribute):
   
   def _validate_required(self, value):
     if self.required and value == None:
-      raise PropertyValidationFailed('Required property was None')
+      raise PropertyValidationFailed(
+        "'{}' property was set to None, but is required"
+        .format(self._code_name)
+      )
   
   def _validate_types(self, value):
     if value != None and len(self.allowed_types) > 0:
@@ -62,7 +70,14 @@ class Property(ModelAttribute):
         if isinstance(value, allowed_type):
           break
       else:
-        raise PropertyValidationFailed('Property value does not conform to allowed_types')
+        raise PropertyValidationFailed(
+          "{} property was set to {} of type '{}' when the only allowed types are {}"
+          .format(
+            self._code_name, value,
+            type(value).__name__,
+            map(lambda typ: typ.__name__, self.allowed_types)
+          )
+        )
   
   def _validate_unique(self, entity, value):
     if not self.unique: return
@@ -71,7 +86,10 @@ class Property(ModelAttribute):
     
     for result in results:
       if result.key != entity.key:
-        raise PropertyValidationFailed('Property {} was not unique when expected'.format(self._name))
+        raise PropertyValidationFailed(
+          '{0} most contain a unique value but another entity already contains {0} == {1!r}'
+          .format(self._code_name, value)
+        )
   
   def to_search_field(self):
     raise NotImplementedError()
@@ -158,7 +176,10 @@ class ChoicesProperty(Property):
   def _validate_choices(self, value):
     if self.choices == None: return
     if not value in self.choices:
-      raise PropertyValidationFailed('Parameter value not found in allowable choices')
+      raise PropertyValidationFailed(
+        "'{}' field must be one of {} but instead it was '{}'"
+        .format(self._code_name, self.choices, value)
+      )
 
 
 class Integer(ChoicesProperty):
@@ -184,13 +205,19 @@ class Integer(ChoicesProperty):
   def _validate_min(self, value):
     if self.min == None: return
     if value < self.min:
-      raise PropertyValidationFailed('IntegerProperty value length was less than min')
+      raise PropertyValidationFailed(
+        "{} property must be at least {} but was {}"
+        .format(self._code_name, self.min, value)
+      )
   
   def _validate_max(self, value):
     if self.max == None: return
     if value > self.max:
-      raise PropertyValidationFailed('IntegerProperty value length was greater than max')
-
+      raise PropertyValidationFailed(
+        "{} property must be at most {} but was {}"
+        .format(self._code_name, self.max, value)
+      )
+    
   def query_uses_datastore(self, operator, value):
     return True
         
@@ -264,18 +291,27 @@ class String(ChoicesProperty):
   def _validate_min(self, value):
     if self.min == None: return
     if len(value) < self.min:
-      raise PropertyValidationFailed('StringProperty value length was less than min')
+      raise PropertyValidationFailed(
+        "{} property requires at least {} characters but was provided '{}' of length {}"
+        .format(self._code_name, self.min, value, len(value))
+      )
   
   def _validate_max(self, value):
     if self.max == None: return
     if len(value) > self.max:
-      raise PropertyValidationFailed('StringProperty value length was greater than max')
+      raise PropertyValidationFailed(
+        "{} property requires at most {} characters but was provided '{}' of length {}"
+        .format(self._code_name, self.max, value, len(value))
+      )
   
   def _validate_characters(self, value):
     if self.characters == None: return
-    difference = len(set(value) - set(self.characters))
-    if difference > 0:
-      raise PropertyValidationFailed('StringProperty value used disallowed characters')
+    difference = set(value) - set(self.characters)
+    if len(difference) > 0:
+      raise PropertyValidationFailed(
+        "{} property can only contain characters from '{}' but found characters from '{}'"
+        .format(self._code_name, ''.join(self.characters), ''.join(difference))
+      )
 
   def query_uses_datastore(self, operator, value):
     return self.max != None and self.max <= 500

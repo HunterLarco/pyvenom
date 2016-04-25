@@ -9,17 +9,10 @@ indexes:
 # The index.yaml file is automatically uploaded to the admin console when
 # you next deploy your application using appcfg.py.
 
-- kind: AuthToken
-  properties:
-  - name: token
-
 - kind: SessionToken
   properties:
+  - name: expiration
   - name: token
-
-- kind: Test
-  properties:
-  - name: foo
 
 - kind: User
   properties:
@@ -36,3 +29,8 @@ indexes:
 # manually, move them above the marker line.  The index.yaml file is
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
+
+- kind: SessionToken
+  properties:
+  - name: token
+  - name: expiration

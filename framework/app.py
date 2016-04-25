@@ -1,3 +1,6 @@
+import datetime
+
+
 import venom
 
 
@@ -9,6 +12,9 @@ class User(venom.Model):
   username = venom.Properties.String  (min=3, max=100, required=True, unique=True)
   email    = venom.Properties.String  (min=3, max=100, required=True, unique=True)
   
+  created      = venom.Properties.DateTime(set_on_creation=True)
+  last_updated = venom.Properties.DateTime(set_on_update=True)
+  # last_login   = venom.Properties.DateTime()
   
   by_username = venom.Query(username == venom.QP)
   by_email = venom.Query(email == venom.QP)
@@ -17,10 +23,20 @@ class User(venom.Model):
   login_by_email = venom.Query(by_email, password == venom.QP)
 
 class SessionToken(venom.Model):
-  token = venom.Properties.UUID()
-  user = venom.Properties.Model(User)
+  expiration_hours = 48
   
-  by_token = venom.Query(token == venom.QP)
+  def __init__(self, *args, **kwargs):
+    now = datetime.datetime.now()
+    timedelta = datetime.timedelta(hours=self.expiration_hours)
+    expiration = now + timedelta
+    kwargs['expiration'] = expiration
+    super(SessionToken, self).__init__(*args, **kwargs)
+  
+  token      = venom.Properties.UUID(required=True)
+  user       = venom.Properties.Model(User, required=True)
+  expiration = venom.Properties.DateTime(required=True)
+  
+  find_auth = venom.Query(token == venom.QP, expiration > venom.QP)
 
 
 class UserGenericHandler(venom.RequestHandler):
@@ -37,6 +53,17 @@ class UserAuthHandler(venom.RequestHandler):
   def get(self):
     auth = self.headers.get('x-session')
     return auth.user
+  
+  def put(self):
+    username, email, password = self.body.get('username', 'email', 'password')
+    auth = self.headers.get('x-session')
+    user = auth.user
+    user.populate(username=username, email=email, password=password)
+    return user.save()
+  
+  def delete(self):
+    auth = self.headers.get('x-session')
+    auth.user.delete()
 
 
 class UserAuthParameter(venom.Parameters.Model):
@@ -45,10 +72,13 @@ class UserAuthParameter(venom.Parameters.Model):
   
   def cast(self, key, value):
     value = super(venom.Parameters.Model, self).cast(key, value)
-    results = SessionToken.by_token(value)
+    results = SessionToken.find_auth(value, datetime.datetime.now())
     if not results:
       return None
-    return results[0]
+    result = results[0]
+    if not result.user:
+      return None
+    return result
 
 
 app.POST('/users', UserGenericHandler).body({
@@ -57,6 +87,18 @@ app.POST('/users', UserGenericHandler).body({
   'password': User.password.to_route_parameter()
 })
 
-app.GET('/auth', UserAuthHandler).headers({
+app.GET('/users', UserAuthHandler).headers({
+  'X-Session': UserAuthParameter()
+})
+
+app.PUT('/users', UserAuthHandler).headers({
+  'X-Session': UserAuthParameter()
+}).body({
+  'username': User.username.to_route_parameter(),
+  'email'   : User.email.to_route_parameter(),
+  'password': User.password.to_route_parameter()
+})
+
+app.DELETE('/users', UserAuthHandler).headers({
   'X-Session': UserAuthParameter()
 })

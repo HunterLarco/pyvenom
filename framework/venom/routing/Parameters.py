@@ -239,6 +239,9 @@ class Dict(Parameter):
   def _sanitize_template(self, template):
     if not isinstance(template, dict):
       raise Exception('Dict template must be a dict instance')
+    for key, value in template.items():
+      if isinstance(value, dict):
+        template[key] = Dict(value)
     return template
   
   def cast(self, value):

@@ -19,7 +19,7 @@
 
 .EndpointDoc-DocString{
   display:block;
-  word-wrap:pre;
+  white-space:pre;
   margin:10px 0px;
   font-size:14px;
 }

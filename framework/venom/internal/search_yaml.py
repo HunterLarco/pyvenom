@@ -31,8 +31,13 @@ def update_search_yaml(models):
   
   schemas = map(lambda model: model._schema, models)
   generator = VenomIndexGenerator(yaml=index, schemas=schemas)
+  generated = generator.generate()
+  
+  if generated.strip() == index.strip():
+    return False
+  
   with bfile('search.venom.yaml', 'w+') as f:
-    f.write(generator.generate())
+    f.write(generated)
   
   return True
 

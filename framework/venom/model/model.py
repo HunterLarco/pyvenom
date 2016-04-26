@@ -1,5 +1,6 @@
 # system imports
 import inspect
+import os
 
 # package imports
 from ..internal.hybrid_model import HybridModel
@@ -10,15 +11,28 @@ from Properties import Property
 from query import Query
 
 
-__all__ = ['Model', 'Model']
+__all__ = ['Model', 'MetaModel', 'PropertySchema', 'ModelSchema']
+
+
+def run_migration_if_dev():
+  is_dev = os.environ.get('SERVER_SOFTWARE','').startswith('Development')
+  if not is_dev:
+    return 0
+  
+  from migrate import Migration
+  return Migration().run()
+  
 
 
 class MetaModel(type):
   def __init__(cls, name, bases, classdict):
     super(MetaModel, cls).__init__(name, bases, classdict)
     cls._init_class()
-    update_index_yaml([cls])
-    update_search_yaml([cls])
+    if cls.kind != 'Model':
+      update_index_yaml([cls])
+      update_search_yaml([cls])
+      if cls.auto_migrate_in_dev:
+        run_migration_if_dev()
 
 
 class PropertySchema(object):
@@ -95,6 +109,7 @@ class ModelSchema(dict):
 class Model(object):
   __metaclass__ = MetaModel
   
+  auto_migrate_in_dev = True
   kinds = {}
   
   # attributes updates by metaclass
@@ -129,6 +144,13 @@ class Model(object):
       query._connect(entity=self)
   
   @classmethod
+  def _to_route_parameters(cls):
+    return {
+      key: prop.to_route_parameter()
+      for key, prop in cls._properties.items()
+    }
+  
+  @classmethod
   def _execute_datastore_query(cls, query):
     return cls._execute_query(cls.hybrid_model.query_by_datastore(query))
   
@@ -143,6 +165,8 @@ class Model(object):
   
   @classmethod
   def _entity_to_model(cls, hybrid_entity):
+    if not hybrid_entity:
+      return None
     ndb_entity = hybrid_entity.datastore_entity.get_entity()
     properties = {name: prop._get_value(ndb_entity) for name, prop in ndb_entity._properties.items()}
     entity = cls()
@@ -172,6 +196,7 @@ class Model(object):
     json = {
       key: prop._get_value(self)
       for key, prop in self._properties.items()
+      if not prop.hidden
     }
     json['key'] = self.key
     return json
@@ -180,6 +205,8 @@ class Model(object):
   def _set_hybrid_entity_values(cls, entity):
     for key, prop_schema in entity._schema.items():
       prop = prop_schema.property
+      value = prop._get_stored_value(entity)
+      prop._validate_before_save(entity, value)
       value = prop._get_stored_value(entity)
       if prop_schema.search and value != None:
         field = prop.to_search_field()
@@ -218,4 +245,7 @@ class Model(object):
     cls.hybrid_model.put_multi(hybrid_entities)
     for entity in entities:
       entity.key = entity.hybrid_entity.document_id
+  
+  def delete(self):
+    return self.hybrid_entity.delete()
       

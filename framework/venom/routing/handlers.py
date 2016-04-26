@@ -42,18 +42,18 @@ class RequestHandler(Servable):
     self.throw = error
   
   def _get_headers_parameters(self, request):
-    return self.route._headers.load(request.headers)
+    return self.route._headers.load('request.Headers', request.headers)
   
   def _get_query_parameters(self, request):
-    return self.route._query.load(request.GET)
+    return self.route._query.load('request.Query', request.GET)
   
   def _get_url_parameters(self):
     path_params = self.route.path.get_parameters(self.path)
-    return self.route._url.load(path_params)
+    return self.route._url.load('request.Path', path_params)
   
   def _get_body_parameters(self, request, protocol):
     body = protocol._read(request.body)
-    return self.route._body.load(body)
+    return self.route._body.load('request.Body', body)
   
   def serve(self):
     method = self.method.lower()

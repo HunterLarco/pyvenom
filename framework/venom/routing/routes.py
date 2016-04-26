@@ -79,8 +79,9 @@ class Route(object):
   def matches(self, path, method):
     return self.matches_path(path) and self.matches_method(method)
   
-  def handle(self, request, response, error):
-    with self.protocol(request, response, error) as protocol:
+  def handle(self, request, response, error, errors=None):
+    errors = errors if errors else {}
+    with self.protocol(request, response, error, errors) as protocol:
       handler = self.handler(request, response, error, self, protocol)
       response = handler.serve()
       protocol._write(response)

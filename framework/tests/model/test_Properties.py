@@ -61,13 +61,13 @@ class BasePropertyTest(BasicTestCase):
     assert prop.characters == 'fobar'
     
     with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
-      prop.validate('a')
-      prop.validate('foobar')
-      prop.validate('baz')
-      prop.validate('aaaaaaaaa')
+      prop.validate(None, 'a')
+      prop.validate(None, 'foobar')
+      prop.validate(None, 'baz')
+      prop.validate(None, 'aaaaaaaaa')
     with smart_assert.raises() as context:
-      prop.validate('foo')
-      prop.validate(u'bar')
+      prop.validate(None, 'foo')
+      prop.validate(None, u'bar')
       
     assert isinstance(prop._from_storage(unicode('bar')), str)
   
@@ -80,12 +80,12 @@ class BasePropertyTest(BasicTestCase):
     assert prop.required == True
     
     with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
-      prop.validate(1)
-      prop.validate(3)
-      prop.validate(9)
+      prop.validate(None, 1)
+      prop.validate(None, 3)
+      prop.validate(None, 9)
     with smart_assert.raises() as context:
-      prop.validate(3.5)
-      prop.validate(4)
+      prop.validate(None, 3.5)
+      prop.validate(None, 4)
     
     assert prop._from_storage(4.000001) == 4.000001
     
@@ -101,11 +101,11 @@ class BasePropertyTest(BasicTestCase):
     assert prop.required == True
     
     with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
-      prop.validate(1)
-      prop.validate(9)
+      prop.validate(None, 1)
+      prop.validate(None, 9)
     with smart_assert.raises() as context:
-      prop.validate(3)
-      prop.validate(4)
+      prop.validate(None, 3)
+      prop.validate(None, 4)
     
     assert prop._from_storage(4.000001) == 4
     
@@ -116,13 +116,13 @@ class BasePropertyTest(BasicTestCase):
     prop = venom.Properties.ChoicesProperty(choices=[1, 2, 3, '4'])
     
     with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
-      prop.validate(4)
-      prop.validate(None)
+      prop.validate(None, 4)
+      prop.validate(None, None)
     with smart_assert.raises() as context:
-      prop.validate(1)
-      prop.validate(2)
-      prop.validate(3)
-      prop.validate('4')
+      prop.validate(None, 1)
+      prop.validate(None, 2)
+      prop.validate(None, 3)
+      prop.validate(None, '4')
   
   def test_validate_on_set(self):
     class ModelStub(venom.Model):
@@ -192,14 +192,14 @@ class BasePropertyTest(BasicTestCase):
     
     prop = TestProp(required=True)
     with smart_assert.raises() as context:
-      prop.validate(123)
+      prop.validate(None, 123)
     with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
-      prop.validate(None)
+      prop.validate(None, None)
     
     prop = TestProp(required=False)
     with smart_assert.raises() as context:
-      prop.validate(123)
-      prop.validate(None)
+      prop.validate(None, 123)
+      prop.validate(None, None)
   
   def test_set_value_vs_stored_value(self):
     class TestProp(venom.Properties.Property):
@@ -241,53 +241,54 @@ class PropertyComparisonTest(BasicTestCase):
     prop = PropComparisonTestProp()
     prop._connect(name='prop')
     comparison = prop == 123
-    assert comparison.to_search_query([], {}) == 'prop = 123'
+    assert comparison.to_search_query([]) == 'prop = 123'
     comparison = prop < 123
-    assert comparison.to_search_query([], {}) == 'prop < 123'
+    assert comparison.to_search_query([]) == 'prop < 123'
     comparison = prop <= 123
-    assert comparison.to_search_query([], {}) == 'prop <= 123'
+    assert comparison.to_search_query([]) == 'prop <= 123'
     comparison = prop > 123
-    assert comparison.to_search_query([], {}) == 'prop > 123'
+    assert comparison.to_search_query([]) == 'prop > 123'
     comparison = prop >= 123
-    assert comparison.to_search_query([], {}) == 'prop >= 123'
+    assert comparison.to_search_query([]) == 'prop >= 123'
     comparison = prop != 123
-    assert comparison.to_search_query([], {}) == '(NOT prop = 123)'
+    assert comparison.to_search_query([]) == '(NOT prop = 123)'
     comparison = prop == 'bar = "foo"'
-    assert comparison.to_search_query([], {}) == 'prop = "bar = \\"foo\\""'
+    assert comparison.to_search_query([]) == 'prop = "bar = \\"foo\\""'
   
   def test_search_query_with_query_parameter(self):
     prop = PropComparisonTestProp()
     prop._connect(name='prop')
     comparison = prop == venom.QueryParameter()
-    assert comparison.to_search_query(['foo'], {}) == 'prop = "foo"'
-    assert comparison.to_search_query([123], {}) == 'prop = 123'
+    assert comparison.to_search_query(['foo']) == 'prop = "foo"'
+    assert comparison.to_search_query([123]) == 'prop = 123'
     comparison = prop == venom.QueryParameter('bar')
-    assert comparison.to_search_query([], { 'bar': 'foo' }) == 'prop = "foo"'
+    assert comparison.to_search_query(['foo']) == 'prop = "foo"'
   
   def test_datastore_query_without_query_parameter(self):
     prop = PropComparisonTestProp()
     prop._connect(name='prop')
     comparison = prop == '123'
-    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '=', '123')"
+    assert str(comparison.to_datastore_query([])) == "FilterNode('prop', '=', '123')"
     comparison = prop < '123'
-    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '<', '123')"
+    assert str(comparison.to_datastore_query([])) == "FilterNode('prop', '<', '123')"
     comparison = prop <= '123'
-    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '<=', '123')"
+    assert str(comparison.to_datastore_query([])) == "FilterNode('prop', '<=', '123')"
     comparison = prop > '123'
-    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '>', '123')"
+    assert str(comparison.to_datastore_query([])) == "FilterNode('prop', '>', '123')"
     comparison = prop >= '123'
-    assert str(comparison.to_datastore_query([], {})) == "FilterNode('prop', '>=', '123')"
+    assert str(comparison.to_datastore_query([])) == "FilterNode('prop', '>=', '123')"
     comparison = prop != '123'
-    assert str(comparison.to_datastore_query([], {})) == "OR(FilterNode('prop', '<', '123'), FilterNode('prop', '>', '123'))"
+    assert str(comparison.to_datastore_query([])) == "OR(FilterNode('prop', '<', '123'), FilterNode('prop', '>', '123'))"
   
   def test_datastore_query_with_query_parameter(self):
     prop = PropComparisonTestProp()
     prop._connect(name='prop')
     comparison = prop == venom.QueryParameter()
-    assert str(comparison.to_datastore_query(['foo'], {})) == "FilterNode('prop', '=', 'foo')"
-    assert str(comparison.to_datastore_query(['bar'], {})) == "FilterNode('prop', '=', 'bar')"
+    assert str(comparison.to_datastore_query(['foo'])) == "FilterNode('prop', '=', 'foo')"
+    assert str(comparison.to_datastore_query(['bar'])) == "FilterNode('prop', '=', 'bar')"
     comparison = prop == venom.QueryParameter('bar')
-    assert str(comparison.to_datastore_query([], { 'bar': 'foo' })) == "FilterNode('prop', '=', 'foo')"
+    args = comparison.to_query_arguments().apply(bar='foo')
+    assert str(comparison.to_datastore_query(args)) == "FilterNode('prop', '=', 'foo')"
   
   def test_uses_datastore(self):
     prop = PropComparisonTestProp()

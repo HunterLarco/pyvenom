@@ -7,6 +7,8 @@ from google.appengine.ext import ndb
 class MigrationTests(BasicTestCase):
   def test_migration_works(self):
     class Test(venom.Model):
+      auto_migrate_in_dev = False
+      
       foo = venom.Properties.String()
       bar = venom.Properties.String()
       
@@ -16,6 +18,8 @@ class MigrationTests(BasicTestCase):
     assert len(Test.matches()) == 1
     
     class Test(venom.Model):
+      auto_migrate_in_dev = False
+      
       foo = venom.Properties.String(max=None)
       bar = venom.Properties.String()
       

@@ -23,10 +23,16 @@ class Migration(object):
   
   def __init__(self):
     self._last_migration = self._get_last_migration()
-    self._current_migration = self._start_new_migration()
+    self._current_migration = None
     
     self._current_schema = load_search_schema().yaml
     self._last_schema = self._last_migration.schema if self._last_migration else None
+    
+    if self._requires_migration():
+      self._current_migration = self._start_new_migration()
+  
+  def _requires_migration(self):
+    return bool(self._get_added_properties())
   
   def _get_last_migration(self):
     # TODO: also store current migration in memcache
@@ -71,6 +77,8 @@ class Migration(object):
     self._current_migration.put()
   
   def run(self, batch_size=200):
+    if not self._current_migration:
+      return 0
     kinds_updated = 0
     kinds = self._get_added_properties()
     for kind in kinds:

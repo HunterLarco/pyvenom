@@ -1,11 +1,40 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import argparse
 import sys
 from argparse import ArgumentTypeError
 import os
 import glob
 import shutil
+import subprocess
+
+
+def get_input(*args, **kwargs):
+  try:
+    input = raw_input
+  except NameError:
+    pass
+  return input(*args, **kwargs)
+
+
+def check_brew_install():
+  command = ['brew', 'list', 'google-app-engine']
+  process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  output, error = process.communicate()
+  
+  if error.startswith('Error'):
+    print('''Google App Engine is not installed on your system
+and is required for venom to run.
+
+Install Google App Engine? (y/n): ''', end='')
+    response = get_input()
+    if response.lower() == 'y':
+      os.system('brew install google-app-engine')
+    else:
+      print('ERROR: Google App Engine not installed. Exiting')
+      exit(1)
 
 
 def copytree(src, dst, symlinks=False, ignore=None, template=None):
@@ -46,7 +75,7 @@ The most commonly used venom commands are:
     # exclude the rest of the args too, or validation will fail
     args = parser.parse_args(sys.argv[1:2])
     if not hasattr(self, args.command):
-      print 'Unrecognized command'
+      print('Unrecognized command')
       parser.print_help()
       exit(1)
     # use dispatch pattern to invoke method with same name
@@ -82,7 +111,7 @@ The most commonly used venom commands are:
         if args.application else
         os.path.basename(os.path.normpath(dir_path))
     })
-    print '''New venom project created at ./{}
+    print('''New venom project created at ./{}
 
   To run the server
     - Run `venom start test` or
@@ -90,7 +119,7 @@ The most commonly used venom commands are:
   
   To open the server in the Venom IDE
     - Run `venom ide test` or
-    - Run `cd test` and then `venom ide`'''.format(os.path.basename(os.path.normpath(dir_path)))
+    - Run `cd test` and then `venom ide`'''.format(os.path.basename(os.path.normpath(dir_path))))
   
   def start(self):
     parser = argparse.ArgumentParser(description='Run a venom server')
@@ -101,6 +130,8 @@ The most commonly used venom commands are:
     parser.add_argument('--admin_port', help='Admin server port', action='store')
     parser.add_argument('--admin_host', help='Admin server host', action='store')
     args = parser.parse_args(sys.argv[2:])
+    
+    check_brew_install()
     
     dir_path = os.path.abspath(args.dir)
     

@@ -35,6 +35,7 @@ class Property(ModelAttribute):
     self.required = required
     self.hidden = hidden
     self.unique = unique
+    self._code_name = 'Property'
   
   def __equals__(self, value):
     cls = self.__class__
@@ -51,7 +52,7 @@ class Property(ModelAttribute):
       setattr(entity, '_values', {})
     if model and self.unique:
       setattr(model, '_by_{}'.format(name), Query(self == QueryParameter))
-    if name:
+    if name and self._model:
       self._code_name = '{}.{}'.format(self._model.kind, name)
   
   def validate(self, entity, value):

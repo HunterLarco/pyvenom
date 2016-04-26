@@ -4,6 +4,7 @@ import argparse
 import sys
 from argparse import ArgumentTypeError
 import os
+import glob
 import shutil
 
 
@@ -37,8 +38,10 @@ class VenomCLI(object):
 
 The most commonly used venom commands are:
    create   Create a new pyvenom project
+   start    Starts a venom server
 ''')
     parser.add_argument('command', help='Subcommand to run')
+    
     # parse_args defaults to [1:] for args, but you need to
     # exclude the rest of the args too, or validation will fail
     args = parser.parse_args(sys.argv[1:2])
@@ -79,15 +82,41 @@ The most commonly used venom commands are:
         if args.application else
         os.path.basename(os.path.normpath(dir_path))
     })
-    print 'DONE'
+    print '''New venom project created at ./{}
+
+  To run the server
+    - Run `venom start test` or
+    - Run `cd test` and then `venom start`
+  
+  To open the server in the Venom IDE
+    - Run `venom ide test` or
+    - Run `cd test` and then `venom ide`'''.format(os.path.basename(os.path.normpath(dir_path)))
   
   def start(self):
     parser = argparse.ArgumentParser(description='Run a venom server')
     parser.add_argument('dir', help='pyvenom server directory', default='.', action='store', nargs='?')
+    parser.add_argument('-c', '--clean', help='Clear all databases before starting the server', action='store_true')
+    parser.add_argument('--port', help='Server port', action='store')
+    parser.add_argument('--host', help='Server host', action='store')
+    parser.add_argument('--admin_port', help='Admin server port', action='store')
+    parser.add_argument('--admin_host', help='Admin server host', action='store')
     args = parser.parse_args(sys.argv[2:])
     
     dir_path = os.path.abspath(args.dir)
-    os.system('dev_appserver.py "{}"'.format(dir_path))
+    
+    command = 'dev_appserver.py "{}"'.format(dir_path)
+    kwargs = []
+    if args.clean:
+      kwargs.append('--clear_datastore')
+      kwargs.append('--clear_search_indexes')
+      kwargs.append('--clear_prospective_search')
+    
+    if args.port: kwargs.append('--port {}'.format(args.port))
+    if args.host: kwargs.append('--host {}'.format(args.host))
+    if args.admin_port: kwargs.append('--admin_port {}'.format(args.admin_port))
+    if args.admin_host: kwargs.append('--admin_host {}'.format(args.admin_host))
+    
+    os.system(command + ' ' + ' '.join(kwargs))
 
 
 if __name__ == '__main__':

@@ -12,6 +12,7 @@ html, body{
 {% include 'css/resets/box.css' %}
 {% include 'css/resets/webkit.css' %}
 
+{% include 'css/components/Sidebar.css' %}
 {% include 'css/components/KeyValueList.css' %}
 {% include 'css/components/EndpointDoc.css' %}
 {% include 'css/components/UrlParameter.css' %}
@@ -35,9 +36,9 @@ html, body{
 <body>
 
 
-<div class='Layout js-Layout'>
-  <div class='Layout-Sidebar js-Sidebar'>
-    <div class='Layout-SidebarDragger js-SidebarDragger'></div>
+<div class='Layout Sidebar-DragOver js-Layout'>
+  <div class='Layout-Sidebar js-Sidebar-Routes'>
+    <div class='Sidebar-Dragger js-SidebarDragger'></div>
   
     <div class='Layout-SidebarHeader'>
       <div class='Header-Title'>Routes</div>
@@ -57,6 +58,10 @@ html, body{
       <div class='EndpointDoc-Content js-DocParameters'></div>
   
     </div>
+  </div>
+  
+  <div class='Layout-Explorer js-Sidebar-Explorer'>
+    <div class='Sidebar-Dragger right js-SidebarDragger'></div>
   </div>
 </div>
 

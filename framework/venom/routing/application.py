@@ -10,6 +10,7 @@ from handlers import RequestHandler
 from ..__ui__ import ui
 from ..model import Model
 import Parameters
+from ..model import Properties
 import docs
 
 
@@ -144,7 +145,7 @@ class _RoutesShortHand(WSGIEntryPoint):
         """
         query_name = self.query.get('query')
         if not query_name or not query_name in model._queries:
-          return { 'entities': model.all(), 'query': 'all' }
+          query_name = 'all'
         query = model._queries[query_name]
         query_kwargs = {
           key: value
@@ -153,7 +154,8 @@ class _RoutesShortHand(WSGIEntryPoint):
         }
         return {
           'entities': query(**query_kwargs),
-          'query': query_name
+          'query': query_name,
+          'type': model.kind
         }
       
       def post(self):
@@ -213,10 +215,19 @@ class Application(_RoutesShortHand):
   allowed_prefixes = frozenset(('api', 'meta', 'routes', 'docs'))
   internal_protocol = Protocols.JSONProtocol
   
-  def __init__(self, routes=None, version=1, protocol=Protocols.JSONProtocol):
+  default_errors = {
+    Parameters.ParameterCastingFailed    : 1000,
+    Parameters.ParameterValidationFailed : 1001,
+    Properties.PropertyValidationFailed  : 2000,
+  }
+  
+  def __init__(self, routes=None, version=1, protocol=Protocols.JSONProtocol, errors=None):
     super(Application, self).__init__(protocol=protocol)
     self.routes = routes if routes else []
+    self.errors = errors if errors else {}
     self.version = version
+    
+    self.errors = dict(self.errors.items() + self.default_errors.items())
     
     self._api_prefix = '/{}/v{}'.format('api', version)
     self._meta_prefix = '/{}/v{}'.format('meta', version)
@@ -232,7 +243,7 @@ class Application(_RoutesShortHand):
     if route == None:
       error(404)
       return
-    route.handle(request, response, error)
+    route.handle(request, response, error, errors=self.errors)
   
   def find_route(self, path, method):
     for route in self.routes:

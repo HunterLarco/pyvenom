@@ -165,6 +165,8 @@ class Model(object):
   
   @classmethod
   def _entity_to_model(cls, hybrid_entity):
+    if not hybrid_entity:
+      return None
     ndb_entity = hybrid_entity.datastore_entity.get_entity()
     properties = {name: prop._get_value(ndb_entity) for name, prop in ndb_entity._properties.items()}
     entity = cls()
@@ -194,6 +196,7 @@ class Model(object):
     json = {
       key: prop._get_value(self)
       for key, prop in self._properties.items()
+      if not prop.hidden
     }
     json['key'] = self.key
     return json
@@ -202,6 +205,8 @@ class Model(object):
   def _set_hybrid_entity_values(cls, entity):
     for key, prop_schema in entity._schema.items():
       prop = prop_schema.property
+      value = prop._get_stored_value(entity)
+      prop._validate_before_save(entity, value)
       value = prop._get_stored_value(entity)
       if prop_schema.search and value != None:
         field = prop.to_search_field()

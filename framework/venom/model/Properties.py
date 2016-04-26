@@ -1,15 +1,22 @@
+# system imports
+import datetime
+import time
+
 # app engine imports
 from google.appengine.ext import ndb
 from google.appengine.api import search
 
 # package imports
 from attribute import ModelAttribute
-from query import PropertyComparison
+from query import PropertyComparison, Query, QueryParameter
 from ..routing import Parameters
 
 
-__all__  = ['Property']
-__all__ += ['InvalidPropertyComparison', 'PropertyValidationFailed']
+__all__  = [
+  'Property', 'ChoicesProperty', 'Integer', 'Float', 'String',
+  'Password', 'UUID', 'Model',
+  'InvalidPropertyComparison', 'PropertyValidationFailed'
+]
 
 
 class InvalidPropertyComparison(Exception):
@@ -23,9 +30,12 @@ class Property(ModelAttribute):
   allowed_operators = frozenset()
   allowed_types = frozenset()
   
-  def __init__(self, required=False):
+  def __init__(self, required=False, hidden=False, unique=False):
     super(Property, self).__init__()
     self.required = required
+    self.hidden = hidden
+    self.unique = unique
+    self._code_name = 'Property'
   
   def __equals__(self, value):
     cls = self.__class__
@@ -40,17 +50,51 @@ class Property(ModelAttribute):
     super(Property, self)._connect(entity=entity, name=name, model=model)
     if entity and not hasattr(entity, '_values'):
       setattr(entity, '_values', {})
+    if model and self.unique:
+      setattr(model, '_by_{}'.format(name), Query(self == QueryParameter))
+    if name and self._model:
+      self._code_name = '{}.{}'.format(self._model.kind, name)
   
-  def validate(self, value):
+  def validate(self, entity, value):
+    self._validate_required(value)
+    self._validate_types(value)
+  
+  def _validate_before_save(self, entity, value):
+    self._validate_unique(entity, value)
+  
+  def _validate_required(self, value):
     if self.required and value == None:
-      raise PropertyValidationFailed('Required property was None')
-    
+      raise PropertyValidationFailed(
+        "'{}' property was set to None, but is required"
+        .format(self._code_name)
+      )
+  
+  def _validate_types(self, value):
     if value != None and len(self.allowed_types) > 0:
       for allowed_type in self.allowed_types:
         if isinstance(value, allowed_type):
           break
       else:
-        raise PropertyValidationFailed('Property value does not conform to allowed_types')
+        raise PropertyValidationFailed(
+          "{} property was set to {} of type '{}' when the only allowed types are {}"
+          .format(
+            self._code_name, value,
+            type(value).__name__,
+            map(lambda typ: typ.__name__, self.allowed_types)
+          )
+        )
+  
+  def _validate_unique(self, entity, value):
+    if not self.unique: return
+    query = getattr(self._model, '_by_{}'.format(self._name))
+    results = query(value)
+    
+    for result in results:
+      if result.key != entity.key:
+        raise PropertyValidationFailed(
+          '{0} most contain a unique value but another entity already contains {0} == {1!r}'
+          .format(self._code_name, value)
+        )
   
   def to_search_field(self):
     raise NotImplementedError()
@@ -71,7 +115,7 @@ class Property(ModelAttribute):
     return self._set_value(instance, value)
   
   def _set_value(self, entity, value):
-    self.validate(value)
+    self.validate(entity, value)
     entity._values[self._name] = value
   
   def _get_value(self, entity):
@@ -126,26 +170,29 @@ class Property(ModelAttribute):
 
 
 class ChoicesProperty(Property):
-  def __init__(self, required=False, choices=None):
-    super(ChoicesProperty, self).__init__(required=required)
+  def __init__(self, required=False, choices=None, hidden=False, unique=False):
+    super(ChoicesProperty, self).__init__(required=required, hidden=hidden, unique=unique)
     self.choices = choices
   
-  def validate(self, value):
-    super(ChoicesProperty, self).validate(value)
+  def validate(self, entity, value):
+    super(ChoicesProperty, self).validate(entity, value)
     self._validate_choices(value)
   
   def _validate_choices(self, value):
     if self.choices == None: return
     if not value in self.choices:
-      raise PropertyValidationFailed('Parameter value not found in allowable choices')
+      raise PropertyValidationFailed(
+        "'{}' field must be one of {} but instead it was '{}'"
+        .format(self._code_name, self.choices, value)
+      )
 
 
 class Integer(ChoicesProperty):
   allowed_operators = PropertyComparison.allowed_operators
   allowed_types = frozenset({int})
   
-  def __init__(self, required=False, choices=None, min=None, max=None):
-    super(Integer, self).__init__(required=required, choices=choices)
+  def __init__(self, required=False, choices=None, min=None, max=None, hidden=False, unique=False):
+    super(Integer, self).__init__(required=required, choices=choices, hidden=hidden, unique=unique)
     self.min = min
     self.max = max
     
@@ -154,8 +201,8 @@ class Integer(ChoicesProperty):
       return None
     return int(value)
     
-  def validate(self, value):
-    super(Integer, self).validate(value)
+  def validate(self, entity, value):
+    super(Integer, self).validate(entity, value)
     if value == None: return
     self._validate_min(value)
     self._validate_max(value)
@@ -163,13 +210,19 @@ class Integer(ChoicesProperty):
   def _validate_min(self, value):
     if self.min == None: return
     if value < self.min:
-      raise PropertyValidationFailed('IntegerProperty value length was less than min')
+      raise PropertyValidationFailed(
+        "{} property must be at least {} but was {}"
+        .format(self._code_name, self.min, value)
+      )
   
   def _validate_max(self, value):
     if self.max == None: return
     if value > self.max:
-      raise PropertyValidationFailed('IntegerProperty value length was greater than max')
-
+      raise PropertyValidationFailed(
+        "{} property must be at most {} but was {}"
+        .format(self._code_name, self.max, value)
+      )
+    
   def query_uses_datastore(self, operator, value):
     return True
         
@@ -217,8 +270,8 @@ class String(ChoicesProperty):
   allowed_operators = PropertyComparison.allowed_operators
   allowed_types = [str, unicode]
   
-  def __init__(self, required=False, choices=None, min=None, max=500, characters=None):
-    super(String, self).__init__(required=required, choices=choices)
+  def __init__(self, required=False, choices=None, min=None, max=500, characters=None, hidden=False, unique=False):
+    super(String, self).__init__(required=required, choices=choices, hidden=hidden, unique=unique)
     self.min = min
     self.max = max
     self.characters = characters
@@ -233,8 +286,8 @@ class String(ChoicesProperty):
       return value
     return str(value)
   
-  def validate(self, value):
-    super(String, self).validate(value)
+  def validate(self, entity, value):
+    super(String, self).validate(entity, value)
     if value == None: return
     self._validate_min(value)
     self._validate_max(value)
@@ -243,18 +296,27 @@ class String(ChoicesProperty):
   def _validate_min(self, value):
     if self.min == None: return
     if len(value) < self.min:
-      raise PropertyValidationFailed('StringProperty value length was less than min')
+      raise PropertyValidationFailed(
+        "{} property requires at least {} characters but was provided '{}' of length {}"
+        .format(self._code_name, self.min, value, len(value))
+      )
   
   def _validate_max(self, value):
     if self.max == None: return
     if len(value) > self.max:
-      raise PropertyValidationFailed('StringProperty value length was greater than max')
+      raise PropertyValidationFailed(
+        "{} property requires at most {} characters but was provided '{}' of length {}"
+        .format(self._code_name, self.max, value, len(value))
+      )
   
   def _validate_characters(self, value):
     if self.characters == None: return
-    difference = len(set(value) - set(self.characters))
-    if difference > 0:
-      raise PropertyValidationFailed('StringProperty value used disallowed characters')
+    difference = set(value) - set(self.characters)
+    if len(difference) > 0:
+      raise PropertyValidationFailed(
+        "{} property can only contain characters from '{}' but found characters from '{}'"
+        .format(self._code_name, ''.join(self.characters), ''.join(difference))
+      )
 
   def query_uses_datastore(self, operator, value):
     return self.max != None and self.max <= 500
@@ -275,10 +337,29 @@ class String(ChoicesProperty):
     )
 
 
+class UUID(String):
+  allowed_operators = frozenset({
+    PropertyComparison.EQ
+  })
+  
+  def __init__(self, required=False, hidden=False):
+    super(UUID, self).__init__(required=required, hidden=hidden)
+  
+  def _connect(self, entity=None, name=None, model=None):
+    super(String, self)._connect(entity=entity, name=name, model=model)
+    if entity:
+      import uuid
+      token = str(uuid.uuid1())
+      self._set_value(entity, token)
+    
+
 class Password(String):
   allowed_operators = frozenset({
     PropertyComparison.EQ
   })
+  
+  def __init__(self, required=False, choices=None, min=None, max=500, characters=None, unique=False):
+    super(Password, self).__init__(required=required, choices=choices, min=min, max=max, characters=characters, hidden=True, unique=unique)
   
   def _hash(self, value):
     if value == None: return value
@@ -286,7 +367,7 @@ class Password(String):
     return hashlib.sha256(value).hexdigest()
   
   def _set_value(self, entity, value):
-    self.validate(value)
+    self.validate(entity, value)
     entity._values[self._name] = self._hash(value)
 
   def _get_stored_value(self, entity):
@@ -301,15 +382,15 @@ class Model(Property):
     PropertyComparison.EQ
   })
   
-  def __init__(self, model, required=False):
-    super(Model, self).__init__(required=required)
+  def __init__(self, model, required=False, hidden=False, unique=False):
+    super(Model, self).__init__(required=required, hidden=hidden, unique=unique)
     self.model = model
 
   def _get_value(self, entity):
     value = super(Model, self)._get_value(entity)
     if value and not isinstance(value, self.model):
       value = self.model.get(value)
-    self._set_value(entity, value)
+    entity._values[self._name] = value
     return value
 
   def _to_storage(self, value):
@@ -330,3 +411,31 @@ class Model(Property):
   
   def to_route_parameter(self):
     return Parameters.Model(self.model, required = self.required)
+
+
+class DateTime(Float):
+  allowed_types = frozenset({datetime.datetime})
+  
+  def __init__(self, required=False, choices=None, min=None, max=None, hidden=False, unique=False, set_on_creation=False, set_on_update=False):
+    super(Float, self).__init__(required=required, choices=choices, hidden=hidden, unique=unique, min=min, max=max)
+    self.set_on_creation = set_on_creation
+    self.set_on_update = set_on_update
+  
+  def _to_storage(self, value):
+    if value == None: return None
+    timestamp = time.mktime(value.timetuple())
+    return super(DateTime, self)._from_storage(timestamp)
+  
+  def _from_storage(self, value):
+    value = super(DateTime, self)._from_storage(value)
+    if value == None: return None
+    return datetime.datetime.fromtimestamp(value)
+  
+  def _validate_before_save(self, entity, value):
+    super(DateTime, self)._validate_before_save(entity, value)
+    
+    if self.set_on_creation and not entity.key:
+      self._set_value(entity, datetime.datetime.now())
+    
+    if self.set_on_update:
+      self._set_value(entity, datetime.datetime.now())

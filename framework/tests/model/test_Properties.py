@@ -61,13 +61,13 @@ class BasePropertyTest(BasicTestCase):
     assert prop.characters == 'fobar'
     
     with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
-      prop.validate('a')
-      prop.validate('foobar')
-      prop.validate('baz')
-      prop.validate('aaaaaaaaa')
+      prop.validate(None, 'a')
+      prop.validate(None, 'foobar')
+      prop.validate(None, 'baz')
+      prop.validate(None, 'aaaaaaaaa')
     with smart_assert.raises() as context:
-      prop.validate('foo')
-      prop.validate(u'bar')
+      prop.validate(None, 'foo')
+      prop.validate(None, u'bar')
       
     assert isinstance(prop._from_storage(unicode('bar')), str)
   
@@ -80,12 +80,12 @@ class BasePropertyTest(BasicTestCase):
     assert prop.required == True
     
     with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
-      prop.validate(1)
-      prop.validate(3)
-      prop.validate(9)
+      prop.validate(None, 1)
+      prop.validate(None, 3)
+      prop.validate(None, 9)
     with smart_assert.raises() as context:
-      prop.validate(3.5)
-      prop.validate(4)
+      prop.validate(None, 3.5)
+      prop.validate(None, 4)
     
     assert prop._from_storage(4.000001) == 4.000001
     
@@ -101,11 +101,11 @@ class BasePropertyTest(BasicTestCase):
     assert prop.required == True
     
     with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
-      prop.validate(1)
-      prop.validate(9)
+      prop.validate(None, 1)
+      prop.validate(None, 9)
     with smart_assert.raises() as context:
-      prop.validate(3)
-      prop.validate(4)
+      prop.validate(None, 3)
+      prop.validate(None, 4)
     
     assert prop._from_storage(4.000001) == 4
     
@@ -116,13 +116,13 @@ class BasePropertyTest(BasicTestCase):
     prop = venom.Properties.ChoicesProperty(choices=[1, 2, 3, '4'])
     
     with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
-      prop.validate(4)
-      prop.validate(None)
+      prop.validate(None, 4)
+      prop.validate(None, None)
     with smart_assert.raises() as context:
-      prop.validate(1)
-      prop.validate(2)
-      prop.validate(3)
-      prop.validate('4')
+      prop.validate(None, 1)
+      prop.validate(None, 2)
+      prop.validate(None, 3)
+      prop.validate(None, '4')
   
   def test_validate_on_set(self):
     class ModelStub(venom.Model):
@@ -192,14 +192,14 @@ class BasePropertyTest(BasicTestCase):
     
     prop = TestProp(required=True)
     with smart_assert.raises() as context:
-      prop.validate(123)
+      prop.validate(None, 123)
     with smart_assert.raises(venom.Properties.PropertyValidationFailed) as context:
-      prop.validate(None)
+      prop.validate(None, None)
     
     prop = TestProp(required=False)
     with smart_assert.raises() as context:
-      prop.validate(123)
-      prop.validate(None)
+      prop.validate(None, 123)
+      prop.validate(None, None)
   
   def test_set_value_vs_stored_value(self):
     class TestProp(venom.Properties.Property):

@@ -14,6 +14,18 @@ indexes:
   - name: expiration
   - name: token
 
+- kind: Test
+  properties:
+  - name: foo
+
+- kind: Thing1
+  properties:
+  - name: name
+
+- kind: Thing2
+  properties:
+  - name: name
+
 - kind: User
   properties:
   - name: email

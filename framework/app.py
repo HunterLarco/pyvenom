@@ -14,7 +14,7 @@ class User(venom.Model):
   
   created      = venom.Properties.DateTime(set_on_creation=True)
   last_updated = venom.Properties.DateTime(set_on_update=True)
-  # last_login   = venom.Properties.DateTime()
+  last_login   = venom.Properties.DateTime()
   
   by_username = venom.Query(username == venom.QP)
   by_email = venom.Query(email == venom.QP)
@@ -39,7 +39,7 @@ class SessionToken(venom.Model):
   find_auth = venom.Query(token == venom.QP, expiration > venom.QP)
 
 
-class UserGenericHandler(venom.RequestHandler):
+class UserSignupHandler(venom.RequestHandler):
   def post(self):
     username, email, password = self.body.get('username', 'email', 'password')
     
@@ -49,21 +49,55 @@ class UserGenericHandler(venom.RequestHandler):
     return dict(user.__json__().items() + [('session_token', auth.token)])
 
 
+class UserLoginHandler(venom.RequestHandler):
+  def post(self):
+    username, email, password = self.body.get('username', 'email', 'password')
+    
+    if not username and not email:
+      raise venom.Parameters.ParameterValidationFailed(
+        "'username' or 'email' field is required, but both were missing"
+      )
+    
+    user = None
+    if username:
+      user = User.login_by_username(username, password).get()
+    elif email:
+      user = User.login_by_email(email, password).get()
+    
+    if not user:
+      raise venom.Parameters.ParameterValidationFailed(
+        "No user exists matching the given credentials"
+      )
+    
+    user.last_login = datetime.datetime.now()
+    auth = SessionToken(user=user)
+    venom.Model.save_multi([user, auth])
+    
+    return dict(user.__json__().items() + [('session_token', auth.token)])
+
+
 class UserAuthHandler(venom.RequestHandler):
   def get(self):
-    auth = self.headers.get('x-session')
-    return auth.user
+    user = self.headers.get('x-session')
+    return user
   
   def put(self):
     username, email, password = self.body.get('username', 'email', 'password')
-    auth = self.headers.get('x-session')
-    user = auth.user
+    user = self.headers.get('x-session')
     user.populate(username=username, email=email, password=password)
     return user.save()
   
+  def patch(self):
+    username, email, password = self.body.get('username', 'email', 'password')
+    user = self.headers.get('x-session')
+    if username: user.username = username
+    if email   : user.email    = email
+    if password: user.password = password
+    return user.save()
+  
   def delete(self):
-    auth = self.headers.get('x-session')
-    auth.user.delete()
+    user = self.headers.get('x-session')
+    user.delete()
 
 
 class UserAuthParameter(venom.Parameters.Model):
@@ -76,22 +110,26 @@ class UserAuthParameter(venom.Parameters.Model):
     if not results:
       return None
     result = results[0]
-    if not result.user:
-      return None
-    return result
+    return result.user
 
 
-app.POST('/users', UserGenericHandler).body({
+app.POST('/users/signup', UserSignupHandler).body({
   'username': User.username.to_route_parameter(),
   'email'   : User.email.to_route_parameter(),
   'password': User.password.to_route_parameter()
 })
 
-app.GET('/users', UserAuthHandler).headers({
+app.POST('/users/login', UserLoginHandler).body({
+  'username': venom.Parameters.String(min=1, required=False),
+  'email'   : venom.Parameters.String(min=1, required=False),
+  'password': venom.Parameters.String(min=1, )
+})
+
+app.GET('/users/me', UserAuthHandler).headers({
   'X-Session': UserAuthParameter()
 })
 
-app.PUT('/users', UserAuthHandler).headers({
+app.PUT('/users/me', UserAuthHandler).headers({
   'X-Session': UserAuthParameter()
 }).body({
   'username': User.username.to_route_parameter(),
@@ -99,6 +137,14 @@ app.PUT('/users', UserAuthHandler).headers({
   'password': User.password.to_route_parameter()
 })
 
-app.DELETE('/users', UserAuthHandler).headers({
+app.PATCH('/users/me', UserAuthHandler).headers({
+  'X-Session': UserAuthParameter()
+}).body({
+  'username': venom.Parameters.String(min=3, max=100, required=False),
+  'email'   : venom.Parameters.String(min=3, max=100, required=False),
+  'password': venom.Parameters.String(min=3, max=100, required=False)
+})
+
+app.DELETE('/users/me', UserAuthHandler).headers({
   'X-Session': UserAuthParameter()
 })

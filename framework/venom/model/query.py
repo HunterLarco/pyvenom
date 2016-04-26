@@ -234,7 +234,14 @@ class OR(QueryLogicalOperator):
 
 
 class QueryResults(list):
-  pass
+  def get(self):
+    return self[0] if len(self) > 0 else None
+  
+  def count(self):
+    return len(self)
+  
+  def fetch(self, count, offset=0):
+    return self[offset: offset + count]
 
 
 class Query(AND, ModelAttribute):

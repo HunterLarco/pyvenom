@@ -1,8 +1,0 @@
-<svg fill="none" fill-rule="evenodd" height="100%" viewBox="0 0 24 24" width="100%" xmlns="http://www.w3.org/2000/svg" fit="" preserveAspectRatio="xMidYMid meet">
-  <path d="M5 10.595v2.713l7 3.51v-2.714l-7-3.51zm0 4.185v2.712L12 21v-2.713L5 14.78z" fill="#757575"></path>
-  <path d="M12 16.817l7-3.51v-2.712l-7 3.51v2.712zM12 21l7-3.508V14.78l-7 3.507V21z" fill="#424242"></path>
-  <path d="M19 9.22V6.51L12 3v2.713l7 3.508z" fill="#616161"></path>
-  <path d="M12 3L5 6.508V9.22l7-3.507V3z" fill="#424242"></path>
-  <path d="M5 6.487V9.2l7 3.508V9.995L5 6.487z" fill="#757575"></path>
-  <path d="M12 12.708L19 9.2V6.487l-7 3.508v2.713z" fill="#424242"></path>
-</svg>

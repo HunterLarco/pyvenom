@@ -68,6 +68,7 @@ class VenomCLI(object):
 The most commonly used venom commands are:
    create   Create a new pyvenom project
    start    Starts a venom server
+   kill     Forcefully closes an open port
 ''')
     parser.add_argument('command', help='Subcommand to run')
     
@@ -148,7 +149,29 @@ The most commonly used venom commands are:
     if args.admin_host: kwargs.append('--admin_host {}'.format(args.admin_host))
     
     os.system(command + ' ' + ' '.join(kwargs))
-
+  
+  def kill(self):
+    parser = argparse.ArgumentParser(description='Forcefully closes a port')
+    parser.add_argument('port', help='Port to forcefully close', action='store')
+    args = parser.parse_args(sys.argv[2:])
+    
+    command = ['lsof', '-t', '-i:{}'.format(args.port)]
+    process = subprocess.Popen(command, stdout=subprocess.PIPE)
+    output, error = process.communicate()
+    if output:
+      print('Confirm force close port {} (y/n): '.format(args.port), end='')
+      response = get_input()
+      if response.lower() == 'y':
+        os.system('kill -9 {}'.format(output))
+        print('Port {} forcefully closed'.format(args.port))
+        exit(1)
+      else:
+        print('Snake bite canceled. Exiting')
+        exit(1)
+    
+    print('Port {} is already closed. Exiting'.format(args.port))
+    exit(1)
+      
 
 if __name__ == '__main__':
   VenomCLI()

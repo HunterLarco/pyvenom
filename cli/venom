@@ -10,6 +10,50 @@ import glob
 import shutil
 import subprocess
 import json
+import re
+
+
+class ColorWriter(object):
+  PURPLE    = '\033[95m'
+  BLUE      = '\033[94m'
+  GREEN     = '\033[92m'
+  YELLOW    = '\033[93m'
+  RED       = '\033[91m'
+  RESET     = '\033[0m'
+  BOLD      = '\033[1m'
+  UNDERLINE = '\033[4m'
+  
+  @staticmethod
+  def set(color):
+    import sys
+    sys.stdout.write(color)
+  
+  @classmethod
+  def reset(cls):
+    cls.set(cls.RESET)
+  
+  @classmethod
+  def write(cls, text, color=RESET, end='\n'):
+    cls.set(color)
+    print(text, end=end)
+    cls.set(cls.RESET)
+  
+  @classmethod
+  def error(cls, text, end='\n'):
+    cls.write(text, color=cls.RED, end=end)
+  
+  @classmethod
+  def warn(cls, text, end='\n'):
+    cls.write(text, color=cls.YELLOW, end=end)
+  
+  @classmethod
+  def info(cls, text, end='\n'):
+    cls.write(text, color=cls.BLUE, end=end)
+  
+  @classmethod
+  def log(cls, text, end='\n'):
+    text = re.sub(r'`([^`]*)`', '{}\\1{}{}'.format(cls.UNDERLINE, cls.RESET, cls.GREEN), text)
+    cls.write(text, color=cls.GREEN, end=end)
 
 
 def get_input(*args, **kwargs):
@@ -26,7 +70,7 @@ def check_brew_install():
   output, error = process.communicate()
   
   if error.startswith('Error'):
-    print('''Google App Engine is not installed on your system
+    ColorWriter.warn('''Google App Engine is not installed on your system
 and is required for venom to run.
 
 Install Google App Engine? (y/n): ''', end='')
@@ -34,7 +78,7 @@ Install Google App Engine? (y/n): ''', end='')
     if response.lower() == 'y':
       os.system('brew install google-app-engine')
     else:
-      print('ERROR: Google App Engine not installed. Exiting')
+      ColorWriter.error('ERROR: Google App Engine not installed. Exiting')
       exit(1)
 
 
@@ -77,7 +121,7 @@ The most commonly used venom commands are:
     # exclude the rest of the args too, or validation will fail
     args = parser.parse_args(sys.argv[1:2])
     if not hasattr(self, args.command):
-      print('Unrecognized command')
+      ColorWriter.error('Unrecognized command')
       parser.print_help()
       exit(1)
     # use dispatch pattern to invoke method with same name
@@ -113,7 +157,7 @@ The most commonly used venom commands are:
         if args.application else
         os.path.basename(os.path.normpath(dir_path))
     })
-    print('''New venom project created at ./{}
+    ColorWriter.log('''New venom project created at ./{}
 
   To run the server
     - Run `venom start test` or
@@ -121,7 +165,8 @@ The most commonly used venom commands are:
   
   To open the server in the Venom IDE
     - Run `venom ide test` or
-    - Run `cd test` and then `venom ide`'''.format(os.path.basename(os.path.normpath(dir_path))))
+    - Run `cd test` and then `venom ide`'''
+    .format(os.path.basename(os.path.normpath(dir_path))))
   
   def start(self):
     parser = argparse.ArgumentParser(description='Run a venom server')
@@ -160,17 +205,17 @@ The most commonly used venom commands are:
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     output, error = process.communicate()
     if output:
-      print('Confirm force close port {} (y/n): '.format(args.port), end='')
+      ColorWriter.warn('Confirm force close port {} (y/n): '.format(args.port), end='')
       response = get_input()
       if response.lower() == 'y':
         os.system('kill -9 {}'.format(output))
-        print('Port {} forcefully closed'.format(args.port))
+        ColorWriter.warn('Port {} forcefully closed'.format(args.port))
         exit(1)
       else:
-        print('Snake bite canceled. Exiting')
+        ColorWriter.warn('Snake bite canceled. Exiting')
         exit(1)
     
-    print('Port {} is already closed. Exiting'.format(args.port))
+    ColorWriter.warn('Port {} is already closed. Exiting'.format(args.port))
     exit(1)
   
   def run(self):
@@ -184,17 +229,17 @@ The most commonly used venom commands are:
     is_file = os.path.isfile(json_file)
     
     if not exists:
-      print('ERROR: Current project does not contain venom.json in the root. Exiting')
+      ColorWriter.error('ERROR: Current project does not contain venom.json in the root. Exiting')
       exit(1)
     
     if not is_file:
-      print('ERROR: venom.json is not a file. Exiting')
+      ColorWriter.error('ERROR: venom.json is not a file. Exiting')
       exit(1)
     
     try:
       venom_json = json.loads(open(json_file, 'r').read())
     except ValueError:
-      print('ERROR: venom.json file is not a valid JSON')
+      ColorWriter.error('ERROR: venom.json file is not a valid JSON')
       exit(1)
     
     if not 'scripts' in venom_json:
@@ -202,7 +247,7 @@ The most commonly used venom commands are:
     
     script_name = args.script_name
     if not script_name in venom_json['scripts']:
-      print('ERROR: script name \'{}\' not found in venom.json scripts'.format(script_name))
+      ColorWriter.error('ERROR: script name \'{}\' not found in venom.json scripts'.format(script_name))
       exit(1)
     
     script = venom_json['scripts'][script_name]

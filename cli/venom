@@ -9,6 +9,7 @@ import os
 import glob
 import shutil
 import subprocess
+import json
 
 
 def get_input(*args, **kwargs):
@@ -171,7 +172,41 @@ The most commonly used venom commands are:
     
     print('Port {} is already closed. Exiting'.format(args.port))
     exit(1)
-      
+  
+  def run(self):
+    parser = argparse.ArgumentParser(description='Venom script runner')
+    parser.add_argument('script_name', help='Script name from venom.json', action='store')
+    args = parser.parse_args(sys.argv[2:])
+    
+    curr_dir = os.getcwd()
+    json_file = os.path.join(curr_dir, 'venom.json')
+    exists = os.path.exists(json_file)
+    is_file = os.path.isfile(json_file)
+    
+    if not exists:
+      print('ERROR: Current project does not contain venom.json in the root. Exiting')
+      exit(1)
+    
+    if not is_file:
+      print('ERROR: venom.json is not a file. Exiting')
+      exit(1)
+    
+    try:
+      venom_json = json.loads(open(json_file, 'r').read())
+    except ValueError:
+      print('ERROR: venom.json file is not a valid JSON')
+      exit(1)
+    
+    if not 'scripts' in venom_json:
+      venom_json['scripts'] = {}
+    
+    script_name = args.script_name
+    if not script_name in venom_json['scripts']:
+      print('ERROR: script name \'{}\' not found in venom.json scripts'.format(script_name))
+      exit(1)
+    
+    script = venom_json['scripts'][script_name]
+    os.system(script)
 
 if __name__ == '__main__':
   VenomCLI()

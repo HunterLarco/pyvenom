@@ -1,6 +1,7 @@
 # system imports
 from collections import defaultdict
 import inspect
+from copy import copy
 
 # package imports
 import routes
@@ -11,6 +12,7 @@ from ..__ui__ import ui
 from ..model import Model
 import Parameters
 from ..model import Properties
+from ..model import Query, QueryParameter
 import docs
 
 
@@ -105,6 +107,77 @@ def generate_routes_handler(app):
   return GetRoutesHandler
 
 
+class BelongsToShim(object):
+  def __init__(self, routes, model):
+    super(BelongsToShim, self).__init__()
+    self.routes = routes
+    self.model = model
+    self.domain_queries = []
+    setattr(self.model, '_domain', Query())
+    self.model._init_class()
+    self.model._migrate()
+    # setattr(self.model, '_domain', {
+    #   'url': {},
+    #   'body': {},
+    #   'headers': {},
+    #   'query': {}
+    # })
+  
+  @staticmethod
+  def _combine_dicts(a, b):
+    return dict(a.template.items() + b.template.items())
+  
+  def _add_params_to_model(self, params):
+    for key, param in params.items():
+      param.indexed = True
+      setattr(self.model, key, param)
+      comparison = param == QueryParameter
+      self.domain_queries.append(comparison)
+      setattr(self.model, '_domain', Query(*self.domain_queries))
+      self.model._init_class()
+      self.model._migrate()
+  
+  def url(self, params):
+    # self.model._domain['url'] = params
+    self._add_params_to_model(params)
+    for key, value in params.items():
+      params[key] = value.to_route_parameter()
+    if isinstance(params, dict):
+      params = Parameters.Dict(params)
+    for route in self.routes:
+      route._url.template = self._combine_dicts(route._url, params)
+  
+  def query(self, params):
+    # self.model._domain['query'] = params
+    self._add_params_to_model(params)
+    for key, value in params.items():
+      params[key] = value.to_route_parameter()
+    if isinstance(params, dict):
+      params = Parameters.Dict(params)
+    for route in self.routes:
+      route._query.template = self._combine_dicts(route._query, params)
+  
+  def body(self, params):
+    # self.model._domain['body'] = params
+    self._add_params_to_model(params)
+    for key, value in params.items():
+      params[key] = value.to_route_parameter()
+    if isinstance(params, dict):
+      params = Parameters.Dict(params)
+    for route in self.routes:
+      route._body.template = self._combine_dicts(route._body, params)
+  
+  def headers(self, params):
+    # self.model._domain['headers'] = params
+    self._add_params_to_model(params)
+    for key, value in params.items():
+      params[key] = value.to_route_parameter()
+    if isinstance(params, dict):
+      params = Parameters.Dict(params)
+    for route in self.routes:
+      route._headers.template = self._combine_dicts(route._headers, params)
+
+
 class _RoutesShortHand(WSGIEntryPoint):
   def __init__(self, routes=None, protocol=Protocols.JSONProtocol):
     super(_RoutesShortHand, self).__init__()
@@ -147,6 +220,8 @@ class _RoutesShortHand(WSGIEntryPoint):
     if not issubclass(model, Model):
       raise ValueError('Expected type venom.Model got {}'.format(type(model)))
     
+    crud_routes = []
+    
     if base_path.endswith('/'):
       base_path = base_path[:-1]
     
@@ -160,18 +235,21 @@ class _RoutesShortHand(WSGIEntryPoint):
         """
         Return all entities for this model
         """
-        query_name = self.query.get('query')
-        if not query_name or not query_name in model._queries:
-          query_name = 'all'
-        query = model._queries[query_name]
+        # query_name = self.query.get('query')
+        # if not query_name or not query_name in model._queries:
+          # query_name = '_domain'
+        # query = model._queries[query_name]
+        query = model._domain
+        required_args = [arg.key for arg in query.to_query_arguments()]
         query_kwargs = {
           key: value
-          for key, value in self.query.items()
-          if key != 'query'
+          for key, value in (self.query.items() + self.headers.items() + self.url.items())
+          if key != 'query' and key in required_args
         }
+        
         return {
           'entities': query(**query_kwargs),
-          'query': query_name,
+          # 'query': query_name,
           'type': model.kind
         }
       
@@ -179,12 +257,19 @@ class _RoutesShortHand(WSGIEntryPoint):
         """
         Save a new entity to the database with the given body data
         """
-        return model(**self.body).save()
+        population = dict(
+          self.body.items() +
+          self.query.items() +
+          self.headers.items() +
+          self.url.items()
+        )
+        
+        return model(**population).save()
       
-    self._add_route(base_path, BaseHandler, protocol, routes.GET).query({
+    crud_routes.append(self._add_route(base_path, BaseHandler, protocol, routes.GET).query({
       'query': Parameters.String(required=False)
-    })
-    self._add_route(base_path, BaseHandler, protocol, routes.POST).body(body_params)
+    }))
+    crud_routes.append(self._add_route(base_path, BaseHandler, protocol, routes.POST).body(body_params))
       
     class SpecificHandler(RequestHandler):
       def get(self):
@@ -198,7 +283,13 @@ class _RoutesShortHand(WSGIEntryPoint):
         Given an entity key, replace it's data with the provided body data
         """
         entity = self.url.get('entity')
-        entity.populate(**self.body)
+        population = dict(
+          self.body.items() +
+          self.query.items() +
+          self.headers.items() +
+          self.url.items()
+        )
+        entity.populate(**population)
         return entity.save()
       
       def patch(self):
@@ -206,9 +297,15 @@ class _RoutesShortHand(WSGIEntryPoint):
         Given an entity key, alter any provided fields from the body data
         """
         entity = self.url.get('entity')
+        population = dict(
+          self.body.items() +
+          self.query.items() +
+          self.headers.items() +
+          self.url.items()
+        )
         entity.populate(**{
           key: value
-          for key, value in self.body.items()
+          for key, value in population.items()
           if value != None
         })
         return entity.save()
@@ -221,10 +318,18 @@ class _RoutesShortHand(WSGIEntryPoint):
     
     path = '{}/:entity'.format(base_path)
     url_params = { 'entity': Parameters.Model(model) }
-    self._add_route(path, SpecificHandler, protocol, routes.GET).url(url_params)
-    self._add_route(path, SpecificHandler, protocol, routes.PUT).url(url_params).body(body_params)
-    self._add_route(path, SpecificHandler, protocol, routes.PATCH).url(url_params).body(patch_params)
-    self._add_route(path, SpecificHandler, protocol, routes.DELETE).url(url_params)
+    crud_routes.append(self._add_route(path, SpecificHandler, protocol, routes.GET).url(url_params))
+    crud_routes.append(self._add_route(path, SpecificHandler, protocol, routes.PUT).url(url_params).body(body_params))
+    crud_routes.append(self._add_route(path, SpecificHandler, protocol, routes.PATCH).url(url_params).body(patch_params))
+    crud_routes.append(self._add_route(path, SpecificHandler, protocol, routes.DELETE).url(url_params))
+    
+    
+    class BelongsToThing(object):
+      def __init__(self, crud_routes, model):
+        self.domain = BelongsToShim(crud_routes, model)
+      
+      
+    return BelongsToThing(crud_routes, model)
 
 
 class Application(_RoutesShortHand):

@@ -29,10 +29,7 @@ class MetaModel(type):
     super(MetaModel, cls).__init__(name, bases, classdict)
     cls._init_class()
     if cls.kind != 'Model':
-      update_index_yaml([cls])
-      update_search_yaml([cls])
-      if cls.auto_migrate_in_dev:
-        run_migration_if_dev()
+      cls._migrate()
 
 
 class PropertySchema(object):
@@ -115,6 +112,13 @@ class Model(object):
   # attributes updates by metaclass
   kind = None
   hybrid_model = None
+  
+  @classmethod
+  def _migrate(cls):
+    update_index_yaml([cls])
+    update_search_yaml([cls])
+    if cls.auto_migrate_in_dev:
+      run_migration_if_dev()
   
   @classmethod
   def _init_class(cls):

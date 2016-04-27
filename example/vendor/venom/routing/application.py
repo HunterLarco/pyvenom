@@ -17,6 +17,45 @@ import docs
 __all__ = ['Application', 'VersionDispatch']
 
 
+
+def _removenull(obj):
+  for key, value in obj.items():
+    if value == None:
+      del obj[key]
+    if isinstance(value, dict):
+      _removenull(value)
+  return obj
+
+
+def route_to_meta(route):
+  docstring = ''
+  if len(route.allowed_methods) != 1:
+    docstring = route.handler.serve.__doc__
+  else:
+    route_method = list(route.allowed_methods)[0].lower()
+    docstring = getattr(route.handler, route_method).__doc__
+  if docstring:
+    docstring = docstring.strip()
+    docstring = '\n'.join([
+      line.strip()
+      for line in docstring.split('\n')
+    ])
+  
+  return {
+    'headers': _removenull(dict(route._headers)['template']),
+    'url': _removenull(dict(route._url)['template']),
+    'query': _removenull(dict(route._query)['template']),
+    'body': _removenull(dict(route._body)),
+    'methods': list(route.allowed_methods),
+    'ui.guid': ui.get_guid(route),
+    'ui.handler_name': route.handler.__name__,
+    'ui.handler_file': inspect.getsourcefile(route.handler),
+    'ui.handler_body': ''.join(inspect.getsourcelines(route.handler)[0]),
+    'path': route.path,
+    'docstring': docstring
+  }
+
+
 def generate_meta_handler(app):
   class MetaRouteHandler(RequestHandler):
     def _removenull(self, obj):
@@ -37,33 +76,7 @@ def generate_meta_handler(app):
         if method and not route.matches_method(method):
           continue
         if route.matches_path(path):
-          
-          docstring = ''
-          if len(route.allowed_methods) != 1:
-            docstring = route.handler.serve.__doc__
-          else:
-            route_method = list(route.allowed_methods)[0].lower()
-            docstring = getattr(route.handler, route_method).__doc__
-          if docstring:
-            docstring = docstring.strip()
-            docstring = '\n'.join([
-              line.strip()
-              for line in docstring.split('\n')
-            ])
-          
-          meta['routes'].append({
-            'headers': self._removenull(dict(route._headers)['template']),
-            'url': self._removenull(dict(route._url)['template']),
-            'query': self._removenull(dict(route._query)['template']),
-            'body': self._removenull(dict(route._body)),
-            'methods': list(route.allowed_methods),
-            'ui.guid': ui.get_guid(route),
-            'ui.handler_name': route.handler.__name__,
-            'ui.handler_file': inspect.getsourcefile(route.handler),
-            'ui.handler_body': ''.join(inspect.getsourcelines(route.handler)[0]),
-            'path': route.path,
-            'docstring': docstring
-          })
+          meta['routes'].append(route_to_meta(route))
       return meta
   return MetaRouteHandler
 
@@ -73,8 +86,12 @@ def generate_routes_handler(app):
     def serve(self):
       returned_routes = []
       
+      guid = self.query.get('uiguid')
+      
       for route in app.routes:
         if not route.path.startswith('/api/'): continue
+        if guid and ui.get_guid(route) == guid:
+          return { 'route': route_to_meta(route) }
         returned_routes.append({
           'path': route.path,
           'methods': list(route.allowed_methods),

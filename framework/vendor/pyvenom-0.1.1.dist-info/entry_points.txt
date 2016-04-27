@@ -1,0 +1,3 @@
+[console_scripts]
+venom = venomcli.venom_command:main
+

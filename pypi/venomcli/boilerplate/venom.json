@@ -1,10 +1,6 @@
 {
-  "name": "pyvenom",
-  "venom": {
-    "version": "1.0.0"
-  },
+  "application": "{{ application }}",
   "scripts": {
-    "start": "dev_appserver.py .",
     "deploy": "appcfg.py update .",
     "vendor:install": "pip install -t vendor -r vendor/requirements.txt"
   }

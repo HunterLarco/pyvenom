@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
   name='pyvenom',
-  version='0.0.0',
+  version='0.1.4',
   description='PyVenom, an App Engine framework',
   url='https://github.com/HunterLarco/pyvenom',
   author='Hunter John Larco',
@@ -23,7 +23,7 @@ setup(
     'Intended Audience :: Developers',
     'Topic :: Software Development :: Libraries :: Python Modules',
 
-    # Pick your license as you wish (should match "license" above)
+    # Pick your license as you wish (should match 'license' above)
     'License :: OSI Approved :: MIT License',
 
     # Specify the Python versions you support here. In particular, ensure
@@ -36,12 +36,15 @@ setup(
   # What does your project relate to?
   keywords='pyvenom venom appengine google cloud gae',
 
-  packages=[
-    "pyvenom",
-  ],
+  packages=find_packages(),
+  include_package_data=True,
+  
+  entry_points = {
+    'console_scripts': ['venom=venomcli.venom_command:main'],
+  },
 
   # List run-time dependencies here.  These will be installed by pip when
-  # your project is installed. For an analysis of "install_requires" vs pip's
+  # your project is installed. For an analysis of 'install_requires' vs pip's
   # requirements files see:
   # https://packaging.python.org/en/latest/requirements.html
   install_requires=[]

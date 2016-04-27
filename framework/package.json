@@ -1,9 +1,0 @@
-{
-  "name": "venom",
-  "version": "1.0.0",
-  "scripts": {
-    "start": "dev_appserver.py .",
-    "deploy": "appcfg.py update .",
-    "test": "python tests/runner.py /usr/local/google_appengine tests"
-  }
-}

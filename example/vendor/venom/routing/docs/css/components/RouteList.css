@@ -1,0 +1,13 @@
+.RouteList {
+  display:block;
+}
+
+.RouteList:empty::after{
+  display:block;
+  content:'Loading Routes';
+  
+  padding:20px 10px;
+  text-align:center;
+  
+  color:rgb(138, 138, 138);
+}

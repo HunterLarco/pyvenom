@@ -1,0 +1,26 @@
+{
+  "name": "pyvenom",
+  "scripts": {
+    "test": "python tests/runner.py /usr/local/google_appengine tests",
+    
+    "pip:local:install": "sudo python setup.py install",
+    "pip:local:build": "sudo python setup.py bdist",
+    
+    "pip:remote:upload": "sudo python setup.py sdist upload",
+    "pip:remote:install": "sudo pip install pyvenom",
+    "pip:remote:uninstall": "sudo -H pip uninstall pyvenom",
+    
+    "pip:test:upload": "sudo python setup.py upload -r https://testpypi.python.org/pypi",
+    "pip:test:install": "sudo pip install -i https://testpypi.python.org/pypi pyvenom",
+    
+    "website:start": "dev_appserver.py website/dispatch.yaml website/app/app.yaml website/py/app.yaml website/default/app.yaml website/api/app.yaml",
+    "website:deploy:api": "appcfg.py update website/api",
+    "website:deploy:app": "appcfg.py update website/app",
+    "website:deploy:py": "appcfg.py update website/py",
+    "website:deploy:default": "appcfg.py update website/default",
+    "website:deploy:dispatch": "appcfg.py update_dispatch website",
+    
+    "example:start": "dev_appserver.py example",
+    "example:venom:install": "pip install . -t example/vendor"
+  }
+}

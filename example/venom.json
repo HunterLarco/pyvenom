@@ -1,0 +1,7 @@
+{
+  "application": "use-pyvenom",
+  "scripts": {
+    "deploy": "appcfg.py update .",
+    "vendor:install": "pip install -t vendor -r vendor/requirements.txt"
+  }
+}

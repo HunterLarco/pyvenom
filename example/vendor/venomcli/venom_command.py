@@ -88,6 +88,8 @@ def copytree(src, dst, symlinks=False, ignore=None, template=None):
     s = os.path.join(src, item)
     d = os.path.join(dst, item)
     if os.path.isdir(s):
+      if not os.path.exists(d) or not os.path.isdir(d):
+        os.mkdir(d)
       copytree(s, d, symlinks, ignore)
     else:
       s_file = open(s, 'r')
@@ -114,6 +116,7 @@ The most commonly used venom commands are:
    create   Create a new pyvenom project
    start    Starts a venom server
    kill     Forcefully closes an open port
+   version  Get current version
 ''')
     parser.add_argument('command', help='Subcommand to run')
     
@@ -126,6 +129,9 @@ The most commonly used venom commands are:
       exit(1)
     # use dispatch pattern to invoke method with same name
     getattr(self, args.command)()
+
+  def version(self):
+    print('0.1.6')
 
   def create(self):
     parser = argparse.ArgumentParser(description='Create a new venom project')
@@ -157,16 +163,19 @@ The most commonly used venom commands are:
         if args.application else
         os.path.basename(os.path.normpath(dir_path))
     })
-    ColorWriter.log('''New venom project created at ./{}
+    
+    os.system('cd {} && venom run vendor:install'.format(dir_path))
+    
+    ColorWriter.log('''New venom project created at {0}
 
   To run the server
-    - Run `venom start test` or
-    - Run `cd test` and then `venom start`
+    - Run `venom start {0}` or
+    - Run `cd {0}` and then `venom start`
   
   To open the server in the Venom IDE
-    - Run `venom ide test` or
-    - Run `cd test` and then `venom ide`'''
-    .format(os.path.basename(os.path.normpath(dir_path))))
+    - Run `venom ide {0}` or
+    - Run `cd {0}` and then `venom ide`'''
+    .format(args.dir))
   
   def start(self):
     parser = argparse.ArgumentParser(description='Run a venom server')

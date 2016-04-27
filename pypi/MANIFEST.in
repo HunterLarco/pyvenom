@@ -2,3 +2,4 @@
 include *.py
 
 recursive-include venomcli *
+recursive-include venom *

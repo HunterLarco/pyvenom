@@ -1,8 +1,7 @@
-__all__ = ['monkeypatches', 'vendor', 'internal']
+__all__ = ['monkeypatches', 'internal']
 
 
 import monkeypatches
-import vendor
 import internal
 
 

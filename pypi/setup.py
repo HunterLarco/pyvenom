@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
   name='pyvenom',
-  version='0.1.4',
+  version='0.1.7',
   description='PyVenom, an App Engine framework',
   url='https://github.com/HunterLarco/pyvenom',
   author='Hunter John Larco',
@@ -47,5 +47,7 @@ setup(
   # your project is installed. For an analysis of 'install_requires' vs pip's
   # requirements files see:
   # https://packaging.python.org/en/latest/requirements.html
-  install_requires=[]
+  install_requires=[
+    'pyyaml'
+  ]
 )

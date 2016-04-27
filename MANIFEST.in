@@ -1,0 +1,5 @@
+# added by check_manifest.py
+include *.py
+
+recursive-include venomcli *
+recursive-include venom *

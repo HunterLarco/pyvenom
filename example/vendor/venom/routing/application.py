@@ -146,6 +146,7 @@ class BelongsToShim(object):
       params = Parameters.Dict(params)
     for route in self.routes:
       route._url.template = self._combine_dicts(route._url, params)
+    return self
   
   def query(self, params):
     # self.model._domain['query'] = params
@@ -156,6 +157,7 @@ class BelongsToShim(object):
       params = Parameters.Dict(params)
     for route in self.routes:
       route._query.template = self._combine_dicts(route._query, params)
+    return self
   
   def body(self, params):
     # self.model._domain['body'] = params
@@ -166,6 +168,7 @@ class BelongsToShim(object):
       params = Parameters.Dict(params)
     for route in self.routes:
       route._body.template = self._combine_dicts(route._body, params)
+    return self
   
   def headers(self, params):
     # self.model._domain['headers'] = params
@@ -176,6 +179,7 @@ class BelongsToShim(object):
       params = Parameters.Dict(params)
     for route in self.routes:
       route._headers.template = self._combine_dicts(route._headers, params)
+    return self
 
 
 class _RoutesShortHand(WSGIEntryPoint):

@@ -2,7 +2,7 @@ import venom
 import datetime
 
 
-__all__ = ['User', 'SessionToken', 'UserAuthParameter']
+__all__ = ['User', 'SessionToken', 'UserAuthParameter', 'UserAuthProperty']
 
 
 class User(venom.Model):
@@ -48,3 +48,11 @@ class UserAuthParameter(venom.Parameters.Model):
       return None
     result = results[0]
     return result.user
+
+
+class UserAuthProperty(venom.Properties.Model):
+  def __init__(self):
+    super(UserAuthProperty, self).__init__(User, required=True)
+  
+  def to_route_parameter(self):
+    return UserAuthParameter()

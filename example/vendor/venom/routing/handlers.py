@@ -122,10 +122,10 @@ class HeaderDict(ParameterDict):
     for key, value in obj.items():
       self[key] = value
   
-  def __getitem__(self, key):
-    return super(HeaderDict, self).__getitem__(key.lower())
+  # def __getitem__(self, key):
+    # return super(HeaderDict, self).__getitem__(key.lower())
   
-  def __setitem__(self, key, value):
-    return super(HeaderDict, self).__setitem__(key.lower(), value)
+  # def __setitem__(self, key, value):
+    # return super(HeaderDict, self).__setitem__(key.lower(), value)
     
     

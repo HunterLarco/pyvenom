@@ -155,12 +155,15 @@ class _RoutesShortHand(WSGIEntryPoint):
       url_params = { domain: getattr(model, domain).to_route_parameter() }
     
     body_params = model._to_route_parameters()
-    if domain and domain in body_params:
-      del body_params[domain]
     
     patch_params = model._to_route_parameters()
     for key, param in patch_params.items():
       param.required = False
+    
+    if domain and domain in body_params:
+      del body_params[domain]
+    if domain and domain in patch_params:
+      del patch_params[domain]
     
     class BaseHandler(RequestHandler):
       def get(self):

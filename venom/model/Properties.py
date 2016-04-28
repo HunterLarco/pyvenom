@@ -60,6 +60,7 @@ class Property(ModelAttribute):
     self._validate_types(value)
   
   def _validate_before_save(self, entity, value):
+    self._validate_required(value)
     self._validate_unique(entity, value)
   
   def _validate_required(self, value):

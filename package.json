@@ -21,6 +21,6 @@
     "website:deploy:dispatch": "appcfg.py update_dispatch website",
     
     "example:start": "dev_appserver.py example",
-    "example:venom:install": "pip install . -t example/vendor"
+    "example:venom:install": "pip install . -t example/vendor --upgrade"
   }
 }

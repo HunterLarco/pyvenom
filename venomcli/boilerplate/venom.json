@@ -1,5 +1,6 @@
 {
   "application": "{{ application }}",
+  "name": "{{ application }}",
   "scripts": {
     "deploy": "appcfg.py update .",
     "vendor:install": "pip install -t vendor -r vendor/requirements.txt"

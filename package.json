@@ -7,11 +7,11 @@
     "pip:local:build": "sudo python setup.py bdist",
     
     "pip:remote:upload": "sudo python setup.py sdist upload",
-    "pip:remote:install": "sudo pip install pyvenom",
+    "pip:remote:install": "sudo pip install pyvenom --upgrade",
     "pip:remote:uninstall": "sudo -H pip uninstall pyvenom",
     
     "pip:test:upload": "sudo python setup.py upload -r https://testpypi.python.org/pypi",
-    "pip:test:install": "sudo pip install -i https://testpypi.python.org/pypi pyvenom",
+    "pip:test:install": "sudo pip install -i https://testpypi.python.org/pypi pyvenom --upgrade",
     
     "website:start": "dev_appserver.py website/dispatch.yaml website/app/app.yaml website/py/app.yaml website/default/app.yaml website/api/app.yaml",
     "website:deploy:api": "appcfg.py update website/api",

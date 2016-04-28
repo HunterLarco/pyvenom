@@ -183,8 +183,8 @@ The most commonly used venom commands are:
     parser.add_argument('-c', '--clean', help='Clear all databases before starting the server', action='store_true')
     parser.add_argument('--port', help='Server port', action='store')
     parser.add_argument('--host', help='Server host', action='store')
-    parser.add_argument('--admin_port', help='Admin server port', action='store')
-    parser.add_argument('--admin_host', help='Admin server host', action='store')
+    parser.add_argument('--admin-port', help='Admin server port', action='store')
+    parser.add_argument('--admin-host', help='Admin server host', action='store')
     args = parser.parse_args(sys.argv[2:])
     
     check_brew_install()

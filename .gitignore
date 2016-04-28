@@ -86,3 +86,5 @@ cover
 
 # PyCharm/IntelliJ
 .idea
+
+example/vendor

@@ -14,4 +14,4 @@ class Todo(venom.Model):
 
 
 app.CRUD('/lists', TodoList)#.auth(venom.User)
-app.CRUD('/lists/:todolist/todo', Todo)#.auth(venom.User)
+app.CRUD('/lists/:todolist/todo', Todo, domain='todolist')#.auth(venom.User)

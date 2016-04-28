@@ -139,7 +139,7 @@ class Model(object):
     cls.kind = cls.__name__
     cls.kinds[cls.kind] = cls
     cls.hybrid_model = type(cls.kind, (HybridModel,), {})
-    cls._link_owners()
+    cls._owners = cls._link_owners()
     cls.all = Query()
     cls._properties = ModelAttribute.connect(cls, kind=Property)
     cls._queries = ModelAttribute.connect(cls, kind=Query)
@@ -148,7 +148,8 @@ class Model(object):
   @classmethod
   def _link_owners(cls):
     """ link all Models referenced from belongs_to """
-    if not cls.belongs_to: return False
+    owner_dict = {}
+    if not cls.belongs_to: return owner_dict
     owners = cls.belongs_to if isinstance(cls.belongs_to, list) else [cls.belongs_to]
     for owner in owners:
       if not inspect.isclass(owner) or not issubclass(owner, Model):
@@ -167,6 +168,8 @@ class Model(object):
       owner._register_ownership(cls, query)
       setattr(cls, name, prop)
       setattr(cls, '__query_{}'.format(name), query)
+      owner_dict[name] = query
+    return owner_dict
   
   @classmethod
   def _register_ownership(cls, child, query):

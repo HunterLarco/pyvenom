@@ -141,7 +141,7 @@ class _RoutesShortHand(WSGIEntryPoint):
   def TRACE(self, path, handler, protocol=None):
     return self._add_route(path, handler, protocol, routes.TRACE)
   
-  def CRUD(self, base_path, model, protocol=None):
+  def CRUD(self, base_path, model, protocol=None, domain=None):
     if not inspect.isclass(model):
       raise ValueError('Expected type venom.Model got {}'.format(model))
     if not issubclass(model, Model):
@@ -150,7 +150,14 @@ class _RoutesShortHand(WSGIEntryPoint):
     if base_path.endswith('/'):
       base_path = base_path[:-1]
     
+    url_params = {}
+    if domain:
+      url_params = { domain: getattr(model, domain).to_route_parameter() }
+    
     body_params = model._to_route_parameters()
+    if domain and domain in body_params:
+      del body_params[domain]
+    
     patch_params = model._to_route_parameters()
     for key, param in patch_params.items():
       param.required = False
@@ -160,18 +167,12 @@ class _RoutesShortHand(WSGIEntryPoint):
         """
         Return all entities for this model
         """
-        query_name = self.query.get('query')
-        if not query_name or not query_name in model._queries:
-          query_name = 'all'
-        query = model._queries[query_name]
-        query_kwargs = {
-          key: value
-          for key, value in self.query.items()
-          if key != 'query'
-        }
+        if domain:
+          results = model._owners[domain](self.url.get(domain))
+        else:
+          results = model.all()
         return {
-          'entities': query(**query_kwargs),
-          'query': query_name,
+          'entities': results,
           'type': model.kind
         }
       
@@ -179,24 +180,34 @@ class _RoutesShortHand(WSGIEntryPoint):
         """
         Save a new entity to the database with the given body data
         """
-        return model(**self.body).save()
+        entity = model(**self.body)
+        if domain:
+          setattr(entity, domain, self.url.get(domain))
+        return entity.save()
       
-    self._add_route(base_path, BaseHandler, protocol, routes.GET).query({
-      'query': Parameters.String(required=False)
-    })
-    self._add_route(base_path, BaseHandler, protocol, routes.POST).body(body_params)
+    self._add_route(base_path, BaseHandler, protocol, routes.GET).url(url_params)
+    self._add_route(base_path, BaseHandler, protocol, routes.POST).body(body_params).url(url_params)
       
     class SpecificHandler(RequestHandler):
+      def _check_ownership(self):
+        entity = self.url.get('entity')
+        if domain:
+          owner = self.url.get(domain)
+          if getattr(entity, domain).key != owner.key:
+            raise Exception('Invalid ownership')
+      
       def get(self):
         """
         Given an entity key, return the entity found in the database
         """
+        self._check_ownership()
         return self.url.get('entity')
       
       def put(self):
         """
         Given an entity key, replace it's data with the provided body data
         """
+        self._check_ownership()
         entity = self.url.get('entity')
         entity.populate(**self.body)
         return entity.save()
@@ -205,6 +216,7 @@ class _RoutesShortHand(WSGIEntryPoint):
         """
         Given an entity key, alter any provided fields from the body data
         """
+        self._check_ownership()
         entity = self.url.get('entity')
         entity.populate(**{
           key: value
@@ -217,10 +229,11 @@ class _RoutesShortHand(WSGIEntryPoint):
         """
         Given an entity key, remove that entity from the database
         """
+        self._check_ownership()
         self.url.get('entity').delete()
     
     path = '{}/:entity'.format(base_path)
-    url_params = { 'entity': Parameters.Model(model) }
+    url_params = dict({ 'entity': Parameters.Model(model) }.items() + url_params.items())
     self._add_route(path, SpecificHandler, protocol, routes.GET).url(url_params)
     self._add_route(path, SpecificHandler, protocol, routes.PUT).url(url_params).body(body_params)
     self._add_route(path, SpecificHandler, protocol, routes.PATCH).url(url_params).body(patch_params)

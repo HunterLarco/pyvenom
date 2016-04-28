@@ -5,9 +5,15 @@ api_version: 1
 threadsafe: yes
 
 handlers:
-# API SCRIPT
+# APP SCRIPT
 - url: .*
   script: app.app
+
+# STATIC DIRECTORIES
+- url: /images
+  static_dir: images
+- url: /resources
+  static_dir: resources
 
 # APP STATS
 - url: /stats(/.*)?

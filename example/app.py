@@ -1,7 +1,8 @@
 import venom
+import user
 
 
-app = venom.Application(packages=venom.User, default_auth='X-Authorization')
+app = venom.Application(packages=user)#, default_auth='X-Authorization')
 
 
 class TodoList(venom.Model):
@@ -12,5 +13,5 @@ class Todo(venom.Model):
   belongs_to = TodoList
 
 
-app.CRUD('/lists', TodoList).auth(venom.User)
-app.CRUD('/lists/:todolist/todo', Todo).auth(venom.User)
+app.CRUD('/lists', TodoList)#.auth(venom.User)
+app.CRUD('/lists/:todolist/todo', Todo)#.auth(venom.User)

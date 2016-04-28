@@ -238,11 +238,12 @@ class Application(_RoutesShortHand):
     Properties.PropertyValidationFailed  : 2000,
   }
   
-  def __init__(self, routes=None, version=1, protocol=Protocols.JSONProtocol, errors=None):
+  def __init__(self, routes=None, version=1, packages=None, protocol=Protocols.JSONProtocol, errors=None):
     super(Application, self).__init__(protocol=protocol)
     self.routes = routes if routes else []
     self.errors = errors if errors else {}
     self.version = version
+    self.packages = []
     
     self.errors = dict(self.errors.items() + self.default_errors.items())
     
@@ -252,6 +253,21 @@ class Application(_RoutesShortHand):
     self._docs_prefix = '/{}/v{}'.format('docs', version)
     
     self._add_routes_route()
+    
+    if packages and not isinstance(packages, list):
+      packages = [packages]
+    self._load_packages(packages)
+  
+  def _load_packages(self, packages):
+    if not packages: return
+    for package in packages:
+      self.load_package(package)
+    
+  def load_package(self, package):
+    if not hasattr(package, 'package'):
+      raise AttributeError('Venom Package must have package(app) method')
+    getattr(package, 'package')(self)
+    self.packages.append(package)
   
   def dispatch(self, request, response, error):
     if self._matches_prefix(request.path, self._docs_prefix):

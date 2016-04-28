@@ -9,4 +9,6 @@ class HelloWorld(venom.RequestHandler):
     return { 'message': 'Hello World!' }
 
 
+venom.ui(
 app.GET('/helloworld', HelloWorld)
+, 'ui-374891883476389473943')

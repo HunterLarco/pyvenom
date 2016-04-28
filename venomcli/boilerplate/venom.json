@@ -3,6 +3,7 @@
   "name": "{{ application }}",
   "scripts": {
     "deploy": "appcfg.py update .",
-    "vendor:install": "pip install -t vendor -r vendor/requirements.txt"
+    "vendor:install": "pip install -t vendor -r vendor/requirements.txt",
+    "start": "dev_appserver.py ."
   }
 }

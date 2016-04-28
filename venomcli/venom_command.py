@@ -262,6 +262,9 @@ The most commonly used venom commands are:
     script = venom_json['scripts'][script_name]
     os.system(script)
 
+  def ide(self):
+    os.system('open /Users/Larco/Documents/Github/venom-app/release/darwin-x64/Venom\ IDE-darwin-x64/Venom\ IDE.app')
+
 
 def main():
   VenomCLI()

@@ -8,7 +8,8 @@ from ..internal.index_yaml import update_index_yaml
 from ..internal.search_yaml import update_search_yaml
 from attribute import ModelAttribute
 from Properties import Property
-from query import Query
+from Properties import Model as ModelProperty
+from query import Query, QueryParameter
 
 
 __all__ = ['Model', 'MetaModel', 'PropertySchema', 'ModelSchema']
@@ -106,8 +107,24 @@ class ModelSchema(dict):
     return doc[:-1]
 
 
+def generate_ownership_descriptor(child, query):
+  class OwnershipDescriptor(object):
+    def __get__(self, instance, cls):
+      if not instance:
+        return self
+      cache_key = '_cached_{}'.format(child.kind)
+      if hasattr(instance, cache_key):
+        return getattr(instance, cache_key)
+      response = query(instance)
+      setattr(instance, cache_key, response)
+      return query(instance)
+  return OwnershipDescriptor()
+
+
 class Model(object):
   __metaclass__ = MetaModel
+  
+  belongs_to = None
   
   auto_migrate_in_dev = True
   kinds = {}
@@ -122,10 +139,45 @@ class Model(object):
     cls.kind = cls.__name__
     cls.kinds[cls.kind] = cls
     cls.hybrid_model = type(cls.kind, (HybridModel,), {})
+    cls._link_owners()
     cls.all = Query()
     cls._properties = ModelAttribute.connect(cls, kind=Property)
     cls._queries = ModelAttribute.connect(cls, kind=Query)
     cls._schema = ModelSchema(cls, cls._properties, cls._queries)
+  
+  @classmethod
+  def _link_owners(cls):
+    """ link all Models referenced from belongs_to """
+    if not cls.belongs_to: return False
+    owners = cls.belongs_to if isinstance(cls.belongs_to, list) else [cls.belongs_to]
+    for owner in owners:
+      if not inspect.isclass(owner) or not issubclass(owner, Model):
+        raise Exception(
+          '{}.belongs_to can only contain other venom.Model subclasses'
+          .format(cls.__name__)
+        )
+      name = owner.kind.lower()
+      if hasattr(cls, name):
+        raise Exception(
+          'Cannot create ownership link to {0} from {1}.belongs_to because {1}.{2} already exists'
+          .format(owner.__name__, cls.__name__, name)
+        )
+      prop = ModelProperty(owner, required=True)
+      query = Query(prop == QueryParameter)
+      owner._register_ownership(cls, query)
+      setattr(cls, name, prop)
+      setattr(cls, '__query_{}'.format(name), query)
+  
+  @classmethod
+  def _register_ownership(cls, child, query):
+    name = '{}s'.format(child.kind.lower())
+    if hasattr(cls, name):
+      raise Exception(
+        'Cannot create ownership link to {0} from {1} because {1}.{2} already exists'
+        .format(child.__name__, cls.__name__, name)
+      )
+    descriptor = generate_ownership_descriptor(child, query)
+    setattr(cls, name, descriptor)
   
   def __init__(self, **kwargs):
     super(Model, self).__init__()

@@ -3,6 +3,7 @@
   "scripts": {
     "test": "python tests/runner.py /usr/local/google_appengine tests",
     
+    "pip:develop": "sudo python setup.py develop",
     "pip:local:install": "sudo python setup.py install",
     "pip:local:build": "sudo python setup.py bdist",
     

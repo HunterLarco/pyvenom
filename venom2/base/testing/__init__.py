@@ -1,3 +1,5 @@
-__all__ = ['unittest']
+__all__ = ['assertions', 'results', 'unittest']
 
+import assertions
+import results
 import unittest

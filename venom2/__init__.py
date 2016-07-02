@@ -1,3 +1,4 @@
-__all__ = ['base']
+__all__ = ['base', 'blueprint']
 
 import base
+import blueprint

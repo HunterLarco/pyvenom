@@ -2,8 +2,8 @@ __all__ = [
   # Modules
   'enum'
   # Tests
-  'enum_tests'
+  # 'enum_tests'
 ]
 
 import enum
-import enum_tests
+# import enum_tests

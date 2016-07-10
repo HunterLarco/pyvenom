@@ -5,7 +5,12 @@ from venom2.base.collections import enum
 import re
 
 
-__all__ = []
+__all__ = [
+  'Token',
+  'BuiltToken',
+  'TokenBuilder',
+  'Tokenizer'
+]
 
 
 def Token(value, name, regex=False):
@@ -13,20 +18,24 @@ def Token(value, name, regex=False):
 
 
 class BuiltToken(object):
-  def __init__(self, token, value):
-    self.token = token
+  def __init__(self, name, value):
+    self.name = name
     self.value = value
   
+  def pretty_print(self, indent=0):
+    if indent > 0: print '  '*indent,
+    print self
+  
   def __iter__(self):
-    return (token, value)
+    return (name, value)
   
   def __eq__(self, other):
     assert isinstance(other, self.__class__)
-    return (self.token == other.token and
+    return (self.name == other.name and
             self.value == other.value)
   
   def __repr__(self):
-    return 'BuiltToken({}, "{}")'.format(self.token, self.value)
+    return "BuiltToken('{}', '{}')".format(self.name, self.value.replace('\n', '\\n'))
 
 
 class TokenBuilder(object):
@@ -38,7 +47,7 @@ class TokenBuilder(object):
   def match_distance(self, string):
     if self._regex:
       pattern = '^{}'.format(self.value)
-      match = re.search(pattern, string)
+      match = re.search(pattern, string, re.MULTILINE)
       if not match: return ''
       return match.group()
     elif string.startswith(self.value):
@@ -46,7 +55,7 @@ class TokenBuilder(object):
     return ''
   
   def build(self, value):
-    return BuiltToken(self, value)
+    return BuiltToken(self.name, value)
   
   def __iter__(self):
     return (value, name)
@@ -57,7 +66,7 @@ class TokenBuilder(object):
             self.name == other.name)
   
   def __repr__(self):
-    return 'TokenBuilder({}"{}", "{}")'.format(
+    return "TokenBuilder({}'{}', '{}')".format(
         'r' if self._regex else '', self.value, self.name)
 
 
@@ -79,12 +88,13 @@ class Tokenizer(object):
     candidates = self.TOKENS
     substring = self.text[self.index:]
     refined_candidates = self.refine_candidates(substring, candidates)
-    sorted_candidates = sorted(refined_candidates, key=lambda x: x[1])
+    sorted_candidates = sorted(refined_candidates, key=lambda x: (-x[1], x[3]))
     if sorted_candidates:
-      token, match_distance, matched_value = sorted_candidates[0]
+      token, match_distance, matched_value, _ = sorted_candidates[0]
       self.index += match_distance
       return token.build(matched_value)
     self.index += 1
+    self.progress = float(self.index) / len(self.text)
     return self.__next__()
   
   def refine_candidates(self, substring, candidates):
@@ -92,7 +102,7 @@ class Tokenizer(object):
       matched_value = token.match_distance(substring)
       match_distance = len(matched_value)
       if match_distance > 0:
-        yield (token, match_distance, matched_value)
+        yield (token, match_distance, matched_value, token._regex)
   
   # Python 2.7 support
   next = __next__

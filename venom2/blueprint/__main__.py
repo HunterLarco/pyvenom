@@ -1,10 +1,19 @@
-import parser
+import formula
 
 def main():
-  foo = parser.FormulaTokenGroup.parse('foo (bar|baz+|(one two))? foo*  foo|bar+',
+  foo = formula.TokenGroup.parse('foo (bar|baz+|(one two))? foo*  foo|bar+',
       implicit_group=True)
   print foo
-  foo.print_matching_tree()
+  # foo.print_matching_tree()
+  
+  foo = formula.TokenGroup(['foo', 'bar', 'baz'])
+  matcher = foo.build_matcher()
+  matcher.send(None)
+  print matcher.send('foo')
+  print matcher.send('bar')
+  print matcher.send('baz')
+  print matcher.send('100')
+  
   # foo.matches_exactly('asd')
   
   # foo = parser.Formula('foo (bar|baz)* foo{1:3} bar? baz')

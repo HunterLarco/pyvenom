@@ -187,6 +187,47 @@ class RepeatedToken(FormulaParserBase):
     print '  '*indent + ', min_count={}, max_count={})'.format(
             self.min_count, self.max_count)
   
+  def build_matcher(self):
+    # HUGE Edge case...
+    # (foo bar)+ foo baz
+    # against foo bar foo baz
+    # we would not know where to backtrack to... Unless we
+    # tracked tokens sent to the candidate in the idling
+    # phase and pass them back.
+    if self.min_count == 0:
+      token_literal = yield MatcherResponseEnum.MATCHES_EXACTLY
+    else:
+      token_literal = yield MatcherResponseEnum.COULD_MATCH
+
+    index = 0
+    while self.max_count is None or index < self.max_count:
+      # Build candidate
+      candidate = self.token.build_matcher()
+      candidate.send(None)
+      # Idle
+      while True:
+        # Begin investigating candidate
+        candidate_response = candidate.send(token_literal)
+        if candidate_response == MatcherResponseEnum.DOES_NOT_MATCH:
+          if index < self.min_count:
+            # Forever will not match
+            while True: yield MatcherResponseEnum.DOES_NOT_MATCH
+          else:
+            # We've fully matches this candidate
+            while True: yield MatcherResponseEnum.MATCHER_EXHAUSTED
+        elif candidate_response == MatcherResponseEnum.COULD_MATCH:
+          token_literal = yield MatcherResponseEnum.COULD_MATCH
+        elif candidate_response == MatcherResponseEnum.MATCHES_EXACTLY:
+          if self.min_count <= index + 1:
+            token_literal = yield MatcherResponseEnum.MATCHES_EXACTLY
+          else:
+            token_literal = yield MatcherResponseEnum.COULD_MATCH
+        elif candidate_response == MatcherResponseEnum.MATCHER_EXHAUSTED:
+          break
+      index += 1
+        
+    while True: yield MatcherResponseEnum.MATCHER_EXHAUSTED
+  
   @classmethod
   def has_presidence(cls, formula_literal):
     '''
@@ -237,6 +278,29 @@ class OrTokenClause(FormulaParserBase):
       token.print_matching_tree(indent+1)
     print '  '*indent + ')'
   
+  def build_matcher(self):
+    token_literal = yield MatcherResponseEnum.COULD_MATCH
+    
+    for token in self.tokens:
+      # Initialized candidate matcher
+      candidate = token.build_matcher()
+      candidate.send(None)
+      # Idle on current candidate
+      while True:
+        # Begin investigating candidate
+        candidate_response = candidate.send(token_literal)
+        if candidate_response == MatcherResponseEnum.DOES_NOT_MATCH:
+          break
+        elif candidate_response == MatcherResponseEnum.COULD_MATCH:
+          token_literal = yield MatcherResponseEnum.COULD_MATCH
+        elif candidate_response == MatcherResponseEnum.MATCHES_EXACTLY:
+          token_literal = yield MatcherResponseEnum.MATCHES_EXACTLY
+        elif candidate_response == MatcherResponseEnum.MATCHER_EXHAUSTED:
+          # We've fully matches this candidate, thus the entire Or Clause.
+          while True: yield MatcherResponseEnum.MATCHER_EXHAUSTED
+    
+    while True: yield MatcherResponseEnum.DOES_NOT_MATCH
+  
   @classmethod
   def parse(cls, formula_literal):
     if (not formula_literal.startswith('|') and
@@ -284,7 +348,7 @@ class TokenGroup(FormulaParserBase):
     '''
     token_literal = yield MatcherResponseEnum.COULD_MATCH
     
-    for token in self.tokens:
+    for i, token in enumerate(self.tokens):
       # Initialized candidate matcher
       candidate = token.build_matcher()
       candidate.send(None)
@@ -299,34 +363,21 @@ class TokenGroup(FormulaParserBase):
           # Continue idling
           token_literal = yield MatcherResponseEnum.COULD_MATCH
         elif candidate_response == MatcherResponseEnum.MATCHES_EXACTLY:
-          # TODO(hunterlarco) insert magic code here
-          # if matches_exactly for each other token by default...
-            # return matches_exactly
-          # else
-            token_literal = yield MatcherResponseEnum.COULD_MATCH
+          # If each following token can match nothing, then MATCHES_EXACTLY:
+          for j in range(i+1, len(self.tokens)):
+            next_token = self.tokens[j]
+            next_matcher = next_token.build_matcher()
+            if not next_matcher.send(None) == MatcherResponseEnum.MATCHES_EXACTLY:
+              break
+          else:
+            token_literal = yield MatcherResponseEnum.MATCHES_EXACTLY
+            continue
+          token_literal = yield MatcherResponseEnum.COULD_MATCH
         elif candidate_response == MatcherResponseEnum.MATCHER_EXHAUSTED:
           # We've fully matches this candidate, exit and reuse token
           break
     
     while True: yield MatcherResponseEnum.MATCHER_EXHAUSTED
-    
-    
-    
-    
-    token_literal = yield MatcherResponseEnum.COULD_MATCH
-    for token in self.tokens:
-      token_matcher = token.build_matcher()
-      token_matcher.send(None)
-      enum_value = None
-      while True:
-        enum_value = token_matcher.send(token_literal)
-        if enum_value == MatcherResponseEnum.DOES_NOT_MATCH:
-          break
-        elif enum_value == MatcherResponseEnum.MATCHES_EXACTLY:
-          yield MatcherResponseEnum.MATCHES_EXACTLY
-          break
-          # exit
-    yield MatcherResponseEnum.DOES_NOT_MATCH
   
   @classmethod
   def _parse(cls, formula_literal):

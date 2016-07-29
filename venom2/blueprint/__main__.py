@@ -6,7 +6,41 @@ def main():
   print foo
   # foo.print_matching_tree()
   
+  '''
   foo = formula.TokenGroup(['foo', 'bar', 'baz'])
+  matcher = foo.build_matcher()
+  matcher.send(None)
+  print matcher.send('foo')
+  print matcher.send('bar')
+  print matcher.send('baz')
+  print matcher.send('100')
+  '''
+  
+  '''
+  foo = formula.RepeatedToken('foo', 2, 5)
+  matcher = foo.build_matcher()
+  matcher.send(None)
+  print matcher.send('foo')
+  print matcher.send('foo')
+  print matcher.send('foo')
+  print matcher.send('foo')
+  print matcher.send('foo')
+  print matcher.send('foo')
+  '''
+  
+  '''
+  foo = formula.TokenGroup(['foo', 'bar+', 'foo*'])
+  matcher = foo.build_matcher()
+  matcher.send(None)
+  print matcher.send('foo')
+  print matcher.send('bar')
+  print matcher.send('bar')
+  print matcher.send('bar')
+  print matcher.send('bar')
+  print matcher.send('foo')
+  '''
+  
+  foo = formula.OrTokenClause(['foo', 'bar', 'baz'])
   matcher = foo.build_matcher()
   matcher.send(None)
   print matcher.send('foo')
